@@ -3,6 +3,27 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+/// The Engine class provides methods to interact with a Montycat server.
+/// It allows you to create and delete stores, and retrieve system structure.
+/// The class is initialized with the server's host, port, username, password,
+/// and an optional store name.
+///
+/// Usage:
+/// ```dart
+/// final engine = Engine(
+///  host: '127.0.0.1
+/// port: 21210,
+/// username: 'user',
+/// password: 'pass',
+/// store: 'store',
+/// );
+/// ```
+/// The class also provides a factory constructor to create an instance from a URI string:
+/// ```dart
+/// final engine = Engine.fromUri('montycat://127.0.0.1/21210/username/password[/store]');
+///```
+/// The store name is optional.
+///
 class Engine {
   const Engine({
     required this.host,
@@ -22,6 +43,13 @@ class Engine {
 
   /// Creates an Engine instance from a URI string in the format:
   /// `montycat://host/port/username/password[/store]`
+  ///
+  /// The URI must start with `montycat://` and contain the following parts:
+  /// - `host`: The hostname or IP address of the Montycat server.
+  /// - `port`: The port number of the Montycat server.
+  /// - `username`: The username for authentication.
+  /// - `password`: The password for authentication.
+  /// - `store`: (Optional) The name of the store.
   ///
   /// Throws [FormatException] if the URI is invalid.
   factory Engine.fromUri(String uri) {

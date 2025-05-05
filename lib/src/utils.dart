@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -24,25 +25,17 @@ Future<dynamic> sendData(
   void Function(String)? callback,
 }) async {
   try {
-    // Establish connection to the server
     var socket = await Socket.connect(
       host,
       port,
     ).timeout(const Duration(seconds: 10));
-    var queryStr = utf8.decode(
-      query,
-      allowMalformed: true,
-    ); // Allow malformed UTF-8 for robustness
+    var queryStr = utf8.decode(query, allowMalformed: true);
     bool isSubscribe = queryStr.contains("subscribe");
 
-    // Send query followed by newline (use [13, 10] for \r\n if server requires it)
     socket.add([...query, 10]); // 10 is ASCII newline (\n)
     await socket.flush();
-    await Future.delayed(
-      const Duration(milliseconds: 100),
-    ); // Allow server to process
+    await Future.delayed(const Duration(milliseconds: 100));
 
-    // Transform socket byte stream to strings and split into lines
     var stream = socket
         .cast<List<int>>()
         .transform(utf8.decoder)
@@ -50,23 +43,22 @@ Future<dynamic> sendData(
         .timeout(const Duration(seconds: 120));
 
     if (isSubscribe) {
-      // Handle subscription: process each line and call callback
       await for (var line in stream) {
         if (callback != null) {
           callback(line.trim());
         }
       }
       await socket.close();
-      return null; // Subscription completes when connection closes
+      return null;
     } else {
-      // Handle one-time query: take first line, parse, and return
       var line = await stream.first;
       await socket.close();
       return recursiveParseOrjson(line.trim());
     }
   } on SocketException catch (e) {
-    // Specific handling for SocketException
     return "SocketError: $e (address: $host, port: $port)";
+  } on TimeoutException catch (e) {
+    return "TimeoutError: $e (address: $host, port: $port)";
   } catch (e) {
     return "Error: $e";
   }
@@ -79,25 +71,27 @@ Future<dynamic> sendData(
 /// Args:
 ///   - [data]: A Dart object that may contain JSON strings, including nested structures.
 ///
+/// Keeps u128 as string as Dart can't handle u128 natively
+///
 /// Returns:
 ///   A fully parsed Dart object with all nested JSON strings converted, except for u128 values.
 dynamic recursiveParseOrjson(dynamic data) {
   if (data is String) {
     if (isU128(data)) {
-      return data; // Keep u128 as string
+      return data;
     }
     try {
       var parsed = json.decode(data);
       return recursiveParseOrjson(parsed);
     } on FormatException {
-      return data; // Return string as-is if not valid JSON
+      return data;
     }
   } else if (data is Map) {
     return data.map((key, value) => MapEntry(key, recursiveParseOrjson(value)));
   } else if (data is List) {
     return data.map(recursiveParseOrjson).toList();
   } else {
-    return data; // Return scalars (int, double, bool, null) unchanged
+    return data;
   }
 }
 
