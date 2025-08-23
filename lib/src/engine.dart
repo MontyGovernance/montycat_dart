@@ -4,28 +4,19 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 /// The Engine class provides methods to interact with a Montycat server.
-/// It allows you to create and delete stores, and retrieve system structure.
-/// The class is initialized with the server's host, port, username, password,
-/// and an optional store name.
+/// It allows you to create and delete stores, manage owners, grant/revoke
+/// permissions, and retrieve system structure.
 ///
-/// Usage:
-/// ```dart
-/// final engine = Engine(
-///  host: '127.0.0.1
-/// port: 21210,
-/// username: 'user',
-/// password: 'pass',
-/// store: 'store',
-/// );
-/// ```
-/// The class also provides a factory constructor to create an instance from a URI string:
-/// ```dart
-/// final engine = Engine.fromUri('montycat://127.0.0.1/21210/username/password[/store]');
-///```
-/// The store name is optional.
+/// Args:
+///   host: The hostname of the Montycat server.
+///   port: The port number of the Montycat server.
+///   username: The username for authentication.
+///   password: The password for authentication.
+///   store: The name of the store to operate on (optional).
 ///
 class Engine {
-  const Engine({
+
+  Engine({
     required this.host,
     required this.port,
     required this.username,
@@ -39,19 +30,10 @@ class Engine {
   final int port;
   final String username;
   final String password;
-  final String? store;
+  late String? store;
 
   /// Creates an Engine instance from a URI string in the format:
   /// `montycat://host/port/username/password[/store]`
-  ///
-  /// The URI must start with `montycat://` and contain the following parts:
-  /// - `host`: The hostname or IP address of the Montycat server.
-  /// - `port`: The port number of the Montycat server.
-  /// - `username`: The username for authentication.
-  /// - `password`: The password for authentication.
-  /// - `store`: (Optional) The name of the store.
-  ///
-  /// Throws [FormatException] if the URI is invalid.
   factory Engine.fromUri(String uri) {
     const prefix = 'montycat://';
     if (!uri.startsWith(prefix)) {
@@ -70,9 +52,7 @@ class Engine {
     final store = parts.length == 5 ? parts[4] : null;
 
     if ([host, portStr, username, password].any((e) => e.isEmpty)) {
-      throw FormatException(
-        "Host, port, username, and password must be non-empty",
-      );
+      throw FormatException("Host, port, username, and password must be non-empty");
     }
 
     final port = int.tryParse(portStr);
@@ -92,21 +72,24 @@ class Engine {
   Future<dynamic> _executeQuery(List<dynamic> command) async {
     Map<String, dynamic> query = {
       "raw": command,
-      "superowner_credentials": [username, password],
+      "credentials": [username, password],
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
-
     return await sendData(host, port, queryBytes);
   }
 
+  // ---------------- Store Management ----------------
+
+  /// Creates a new store.
+  ///
+  /// Args:
+  ///   persistent: Whether the store should be persistent (default: false).
+  /// 
   Future<dynamic> createStore({bool persistent = false}) async {
     if (store == null) {
       throw ArgumentError("Store name must be specified");
     }
-
-    print("Creating store: $store");
-
     return await _executeQuery([
       "create-store",
       "store",
@@ -116,16 +99,112 @@ class Engine {
     ]);
   }
 
-  Future<dynamic> deleteStore({bool persistent = false}) async {
+  Future<dynamic> removeStore({bool persistent = false}) async {
+    if (store == null) {
+      throw ArgumentError("Store name must be specified");
+    }
     return await _executeQuery([
-      "delete-store",
+      "remove-store",
       "store",
       store,
+      "persistent",
       persistent ? "y" : "n",
     ]);
   }
 
-  Future<dynamic> getSystemStructure() async {
-    return await _executeQuery(["get-available-structure"]);
+  // ---------------- Permissions ----------------
+
+  Future<dynamic> grantTo(
+    String owner,
+    String permission, {
+    List<String>? keyspaces,
+  }) async {
+    if (!validPermissions.contains(permission)) {
+      throw ArgumentError(
+          "Invalid permission: $permission. Valid: $validPermissions");
+    }
+
+    if (store == null) {
+      throw ArgumentError("Store must be specified");
+    }
+
+    final command = [
+      "grant-to",
+      "owner",
+      owner,
+      "permission",
+      permission,
+      "store",
+      store!,
+    ];
+
+    if (keyspaces != null && keyspaces.isNotEmpty) {
+      command.add("keyspaces");
+      command.addAll(keyspaces);
+    }
+
+    return await _executeQuery(command);
+  }
+
+  Future<dynamic> revokeFrom(
+    String owner,
+    String permission, {
+    List<String>? keyspaces,
+  }) async {
+    if (!validPermissions.contains(permission)) {
+      throw ArgumentError(
+          "Invalid permission: $permission. Valid: $validPermissions");
+    }
+
+    if (store == null) {
+      throw ArgumentError("Store must be specified");
+    }
+
+    final command = [
+      "revoke-from",
+      "owner",
+      owner,
+      "permission",
+      permission,
+      "store",
+      store!,
+    ];
+
+    if (keyspaces != null && keyspaces.isNotEmpty) {
+      command.add("keyspaces");
+      command.addAll(keyspaces);
+    }
+
+    return await _executeQuery(command);
+  }
+
+  // ---------------- Owner Management ----------------
+
+  Future<dynamic> createOwner(String owner, String password) async {
+    return await _executeQuery([
+      "create-owner",
+      "username",
+      owner,
+      "password",
+      password,
+    ]);
+  }
+
+  Future<dynamic> removeOwner(String owner) async {
+    return await _executeQuery([
+      "remove-owner",
+      "username",
+      owner,
+    ]);
+  }
+
+  Future<dynamic> listOwners() async {
+    return await _executeQuery(["list-owners"]);
+  }
+
+  // ---------------- Structure ----------------
+
+  Future<dynamic> getStructureAvailable() async {
+    return await _executeQuery(["get-structure-available"]);
   }
 }

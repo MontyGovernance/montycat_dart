@@ -1,16 +1,28 @@
-import 'package:montycat_dart/source.dart';
+import 'package:montycat_dart/source.dart' show KeyspaceInMemory, KeyspacePersistent, Engine;
 
 void main() {
-  final engine = Engine(
-    host: 'localhost',
+
+  Engine engine = Engine(
+    host: '127.0.0.1',
     port: 21210,
     username: 'user',
     password: 'pass',
+    store: 'default_store'
   );
 
-  print('Engine created with host: ${engine.host}, port: ${engine.port}');
-  print('Username: ${engine.username}');
-  print('Password: ${engine.password}');
-  print('Store: ${engine.store ?? "No store specified"}');
-  print('Valid permissions: ${Engine.validPermissions}');
+  KeyspaceInMemory testKeyspace = KeyspaceInMemory(keyspace: 'test_keyspace');
+  testKeyspace.connectEngine(engine);
+
+  KeyspacePersistent persistentKeyspace = KeyspacePersistent(keyspace: 'persistent_keyspace');
+  persistentKeyspace.connectEngine(engine);
+
+  Map<String, Type> schema = {
+    'name': String,
+    'age': int,
+    'email': String,
+  };
+
+  testKeyspace.enforceSchema(schema);
+  persistentKeyspace.enforceSchema(schema);
+
 }
