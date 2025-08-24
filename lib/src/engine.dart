@@ -15,7 +15,6 @@ import 'dart:typed_data';
 ///   store: The name of the store to operate on (optional).
 ///
 class Engine {
-
   Engine({
     required this.host,
     required this.port,
@@ -52,7 +51,9 @@ class Engine {
     final store = parts.length == 5 ? parts[4] : null;
 
     if ([host, portStr, username, password].any((e) => e.isEmpty)) {
-      throw FormatException("Host, port, username, and password must be non-empty");
+      throw FormatException(
+        "Host, port, username, and password must be non-empty",
+      );
     }
 
     final port = int.tryParse(portStr);
@@ -76,6 +77,7 @@ class Engine {
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
+    print('Sending query: $queryJson');
     return await sendData(host, port, queryBytes);
   }
 
@@ -85,7 +87,7 @@ class Engine {
   ///
   /// Args:
   ///   persistent: Whether the store should be persistent (default: false).
-  /// 
+  ///
   Future<dynamic> createStore({bool persistent = false}) async {
     if (store == null) {
       throw ArgumentError("Store name must be specified");
@@ -121,7 +123,8 @@ class Engine {
   }) async {
     if (!validPermissions.contains(permission)) {
       throw ArgumentError(
-          "Invalid permission: $permission. Valid: $validPermissions");
+        "Invalid permission: $permission. Valid: $validPermissions",
+      );
     }
 
     if (store == null) {
@@ -153,7 +156,8 @@ class Engine {
   }) async {
     if (!validPermissions.contains(permission)) {
       throw ArgumentError(
-          "Invalid permission: $permission. Valid: $validPermissions");
+        "Invalid permission: $permission. Valid: $validPermissions",
+      );
     }
 
     if (store == null) {
@@ -191,11 +195,7 @@ class Engine {
   }
 
   Future<dynamic> removeOwner(String owner) async {
-    return await _executeQuery([
-      "remove-owner",
-      "username",
-      owner,
-    ]);
+    return await _executeQuery(["remove-owner", "username", owner]);
   }
 
   Future<dynamic> listOwners() async {

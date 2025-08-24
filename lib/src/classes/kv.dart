@@ -4,12 +4,11 @@ import 'package:montycat_dart/source.dart';
 
 import '../tools.dart' show Limit, Permission, Pointer, Timestamp;
 import '../engine.dart' show Engine;
-import 'package:xxhash/xxhash.dart';
 import '../utils.dart' show sendData;
-import '../functions/generic.dart' show convertCustomKey, convertToBinaryQuery, handlePointersForUpdate;
+import '../functions/generic.dart'
+    show convertCustomKey, convertToBinaryQuery, handlePointersForUpdate;
 
 class KV {
-
   String command = "";
   String? store;
   String host = "";
@@ -86,7 +85,6 @@ class KV {
   }
 
   Future<Uint8List> removeEnforcedSchema(String schema) async {
-
     final query = jsonEncode({
       'raw': [
         'remove-enforced-schema',
@@ -106,13 +104,12 @@ class KV {
     return await _runQuery(host, port, queryBytes);
   }
 
-    // Static method equivalent to Python's @classmethod
+  // Static method equivalent to Python's @classmethod
   Future<dynamic> getValue({
     String? key,
     String? customKey,
     bool withPointers = false,
   }) async {
-
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -130,11 +127,9 @@ class KV {
     );
 
     return await _runQuery(host, port, query);
-
   }
 
-    Future<dynamic> deleteKey({String? key, String? customKey}) async {
-
+  Future<dynamic> deleteKey({String? key, String? customKey}) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = customKey;
     }
@@ -145,19 +140,15 @@ class KV {
 
     command = "delete_key";
 
-    Uint8List query = convertToBinaryQuery(
-      cls: this,
-      key: key,
-    );
+    Uint8List query = convertToBinaryQuery(cls: this, key: key);
 
     return await _runQuery(host, port, query);
   }
 
-    Future<dynamic> deleteBulk({
+  Future<dynamic> deleteBulk({
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
   }) async {
-
     if (bulkCustomKeys.isNotEmpty) {
       bulkKeys = [...bulkKeys, ...bulkCustomKeys];
     }
@@ -168,45 +159,42 @@ class KV {
 
     command = "delete_bulk";
 
-    final query = convertToBinaryQuery(
-      cls: this,
-      bulkKeys: bulkKeys,
-    );
+    final query = convertToBinaryQuery(cls: this, bulkKeys: bulkKeys);
 
     return await _runQuery(host, port, query);
   }
 
   Future<dynamic> getBulk({
-  List<String> bulkKeys = const [],
-  List<String> bulkCustomKeys = const [],
-  List<int> limit = const [],
-  bool withPointers = false,
-}) async {
-  if (bulkCustomKeys.isNotEmpty) {
-    bulkKeys = [...bulkKeys, ...bulkCustomKeys];
+    List<String> bulkKeys = const [],
+    List<String> bulkCustomKeys = const [],
+    List<int> limit = const [],
+    bool withPointers = false,
+  }) async {
+    if (bulkCustomKeys.isNotEmpty) {
+      bulkKeys = [...bulkKeys, ...bulkCustomKeys];
+    }
+
+    if (bulkKeys.isEmpty) {
+      throw ArgumentError("No keys provided for retrieval.");
+    }
+
+    command = "get_bulk";
+
+    // check limit
+    if (limit.length == 2) {
+      limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
+    } else if (limit.isNotEmpty && limit.length != 2) {
+      throw ArgumentError(
+        "Limit must be a list of two integers [start, stop].",
+      );
+    }
+
+    final query = convertToBinaryQuery(
+      cls: this,
+      bulkKeys: bulkKeys,
+      withPointers: withPointers,
+    );
+
+    return await _runQuery(host, port, query);
   }
-
-  if (bulkKeys.isEmpty) {
-    throw ArgumentError("No keys provided for retrieval.");
-  }
-
-  command = "get_bulk";
-
-  // check limit
-  if (limit.length == 2) {
-    limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
-  } else if (limit.isNotEmpty && limit.length != 2) {
-    throw ArgumentError("Limit must be a list of two integers [start, stop].");
-  }
-
-  final query = convertToBinaryQuery(
-    cls: this,
-    bulkKeys: bulkKeys,
-    withPointers: withPointers,
-  );
-
-  return await _runQuery(host, port, query);
-}
-
-
 }

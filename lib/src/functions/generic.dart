@@ -1,4 +1,4 @@
-import 'package:xxhash/xxhash.dart';
+import 'package:hashlib/hashlib.dart' show xxh32;
 import 'dart:convert';
 import '../tools.dart' show Pointer, Timestamp;
 import 'dart:typed_data' show Uint8List;
@@ -22,7 +22,6 @@ Map<String, dynamic> handlePointersForUpdate(Map<String, dynamic> value) {
     }
   }
   return updatedValue;
-
 }
 
 Map<String, dynamic> convertCustomKeysValues(Map<String, dynamic> keysValues) {
@@ -49,7 +48,8 @@ Map<String, dynamic> modifyPointers(Map<String, dynamic> value) {
         final keyspace = v[0] as String;
         final rawKey = v[1];
         String processedKey;
-        if (rawKey is int || (rawKey is String && RegExp(r'^\d+$').hasMatch(rawKey))) {
+        if (rawKey is int ||
+            (rawKey is String && RegExp(r'^\d+$').hasMatch(rawKey))) {
           processedKey = rawKey.toString();
         } else {
           processedKey = convertCustomKey(rawKey);
@@ -75,7 +75,6 @@ Uint8List convertToBinaryQuery({
   Map<String, dynamic>? bulkKeysValues,
   bool withPointers = false,
 }) {
-
   searchCriteria = searchCriteria ?? {};
   value = value ?? {};
   bulkValues = bulkValues ?? [];
@@ -93,10 +92,11 @@ Uint8List convertToBinaryQuery({
       throw Exception('Bulk values should fit only one schema');
     }
     schema = schemas.first;
-    bulkValues = bulkValues.map((item) {
-      final filtered = Map<String, dynamic>.from(item)..remove('schema');
-      return modifyPointers(filtered);
-    }).toList();
+    bulkValues =
+        bulkValues.map((item) {
+          final filtered = Map<String, dynamic>.from(item)..remove('schema');
+          return modifyPointers(filtered);
+        }).toList();
   }
 
   if (bulkKeysValues.isNotEmpty) {
@@ -120,7 +120,8 @@ Uint8List convertToBinaryQuery({
 
   final queryDict = {
     'schema': schema,
-    'username': cls.username, // Placeholder; replace with cls.username if available
+    'username':
+        cls.username, // Placeholder; replace with cls.username if available
     'password': cls.password, // Placeholder
     'keyspace': cls.keyspace, // Placeholder
     'store': cls.store, // Placeholder
@@ -144,7 +145,9 @@ Uint8List convertToBinaryQuery({
   return Uint8List.fromList(jsonEncode(queryDict).codeUnits);
 }
 
-Map<String, dynamic> handleTimestampsAndPointers(Map<String, dynamic> searchCriteria) {
+Map<String, dynamic> handleTimestampsAndPointers(
+  Map<String, dynamic> searchCriteria,
+) {
   final pointers = <String, dynamic>{};
   final result = <String, dynamic>{};
 
