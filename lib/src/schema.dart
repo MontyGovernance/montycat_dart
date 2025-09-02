@@ -1,13 +1,11 @@
-import 'tools.dart'; // Assume Pointer, Timestamp, Limit, Permission exist
+import 'tools.dart';
 
-/// Base class for schema definitions with type validation and serialization.
-/// Each subclass must define a `fieldTypes` map.
 abstract class Schema {
   final Map<String, dynamic> _fields = {};
   late final String schema;
 
   Schema(Map<String, dynamic> kwargs) {
-    final hints = getFieldTypes();
+    final hints = metadata();
 
     // Assign provided values
     kwargs.forEach((key, value) {
@@ -29,7 +27,7 @@ abstract class Schema {
   }
 
   /// Each subclass must override to declare its expected field types.
-  Map<String, dynamic> getFieldTypes();
+  Map<String, dynamic> metadata();
 
   Map<String, dynamic> serialize() => Map<String, dynamic>.from(_fields);
 
@@ -82,7 +80,6 @@ abstract class Schema {
         }
       }
 
-      // Handle Union (Dart: List<Type>)
       else if (expectedType is List<Type>) {
         final ok = actualValue == null ||
             expectedType.any((t) => actualValue.runtimeType == t);
@@ -108,5 +105,26 @@ abstract class Schema {
   @override
   String toString() => schema;
   String toJson() => serialize().toString();
+}
 
+  // final userSchema = DynamicSchema({
+  //   'name': 'Alice',
+  //   'age': 30,
+  //   'email': 'alice@example.com',
+  // }, {
+  //   'name': String,
+  //   'age': int,
+  //   'email': String,
+  // });
+class DynamicSchema extends Schema {
+  final Map<String, Type> _hints;
+
+  DynamicSchema(super.kwargs, this._hints);
+
+  @override
+  Map<String, Type> metadata() => _hints;
+}
+
+Schema makeSchema(String name, Map<String, dynamic> fields, Map<String, Type> hints) {
+  return DynamicSchema(fields, hints);
 }

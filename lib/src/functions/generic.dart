@@ -1,12 +1,12 @@
-import 'package:hashlib/hashlib.dart' show xxh32;
+import 'package:hashlib/hashlib.dart' show xxh32code;
 import 'dart:convert';
 import '../tools.dart' show Pointer, Timestamp;
 import 'dart:typed_data' show Uint8List;
 
 String convertCustomKey(dynamic key) {
   final keyStr = key.toString();
-  var bytes = utf8.encode(keyStr); // data being hashed
-  var digest = xxh32.convert(bytes);
+  //var bytes = utf8.encode(keyStr); // data being hashed
+  var digest = xxh32code(keyStr);
   return digest.toString();
 }
 
@@ -70,10 +70,11 @@ Uint8List convertToBinaryQuery({
   Map<String, dynamic>? searchCriteria,
   dynamic value,
   int expireSec = 0,
-  List<Map<String, dynamic>>? bulkValues,
+  List<dynamic>? bulkValues,
   List<String>? bulkKeys,
   Map<String, dynamic>? bulkKeysValues,
   bool withPointers = false,
+
 }) {
   searchCriteria = searchCriteria ?? {};
   value = value ?? {};
@@ -86,7 +87,7 @@ Uint8List convertToBinaryQuery({
   }
 
   String? schema;
-  if (bulkValues.isNotEmpty) {
+  if (bulkValues.isNotEmpty && bulkValues.first is Map<String, dynamic>) {
     final schemas = bulkValues.map((item) => item['schema'] as String?).toSet();
     if (schemas.length > 1) {
       throw Exception('Bulk values should fit only one schema');
@@ -116,7 +117,7 @@ Uint8List convertToBinaryQuery({
   }
 
   searchCriteria = handleTimestampsAndPointers(searchCriteria);
-  value = handleTimestampsAndPointers(value);
+  //value = handleTimestampsAndPointers(value);
 
   final queryDict = {
     'schema': schema,
@@ -127,7 +128,7 @@ Uint8List convertToBinaryQuery({
     'store': cls.store, // Placeholder
     'persistent': cls.persistent, // Placeholder
     'distributed': cls.distributed, // Placeholder
-    'limit_output': cls.limitOutput, // Placeholder
+    'limit_output': cls.limitOutput,
     'key': key?.toString(),
     'value': jsonEncode(value),
     'command': cls.command, // Placeholder

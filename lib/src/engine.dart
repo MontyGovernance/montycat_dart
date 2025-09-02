@@ -2,6 +2,7 @@ import 'utils.dart' show sendData;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'tools.dart' show Permission;
 
 /// The Engine class provides methods to interact with a Montycat server.
 /// It allows you to create and delete stores, manage owners, grant/revoke
@@ -23,42 +24,36 @@ class Engine {
     this.store,
   });
 
-  static const Set<String> validPermissions = {'read', 'write', 'all'};
+  // static const Set<String> validPermissions ={'read', 'write', 'all'};
 
-  final String host;
+  final String host; 
   final int port;
   final String username;
   final String password;
   late String? store;
 
   /// Creates an Engine instance from a URI string in the format:
-  /// `montycat://host/port/username/password[/store]`
+  /// `montycat://username:password@host:port[/store]`
   factory Engine.fromUri(String uri) {
-    const prefix = 'montycat://';
-    if (!uri.startsWith(prefix)) {
+    final parsed = Uri.parse(uri);
+
+    if (parsed.scheme != 'montycat') {
       throw FormatException("URI must use 'montycat://' protocol");
     }
 
-    final parts = uri.substring(prefix.length).split('/');
-    if (parts.length != 4 && parts.length != 5) {
-      throw FormatException("Missing or extra parts in URI");
-    }
+    final username = parsed.userInfo.isNotEmpty
+        ? parsed.userInfo.split(':').first
+        : null;
+    final password = parsed.userInfo.contains(':')
+        ? parsed.userInfo.split(':').last
+        : null;
 
-    final host = parts[0];
-    final portStr = parts[1];
-    final username = parts[2];
-    final password = parts[3];
-    final store = parts.length == 5 ? parts[4] : null;
+    final host = parsed.host;
+    final port = parsed.port;
+    final store = parsed.pathSegments.isNotEmpty ? parsed.pathSegments.first : null;
 
-    if ([host, portStr, username, password].any((e) => e.isEmpty)) {
-      throw FormatException(
-        "Host, port, username, and password must be non-empty",
-      );
-    }
-
-    final port = int.tryParse(portStr);
-    if (port == null) {
-      throw FormatException("Port must be an integer");
+    if (username == null || password == null || host.isEmpty || port == 0) {
+      throw FormatException("Invalid URI: missing username, password, host, or port");
     }
 
     return Engine(
@@ -77,7 +72,7 @@ class Engine {
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
-    print('Sending query: $queryJson');
+    // print('Sending query: $queryJson');
     return await sendData(host, port, queryBytes);
   }
 
@@ -88,7 +83,7 @@ class Engine {
   /// Args:
   ///   persistent: Whether the store should be persistent (default: false).
   ///
-  Future<dynamic> createStore({bool persistent = false}) async {
+  Future<dynamic> createStore() async {
     if (store == null) {
       throw ArgumentError("Store name must be specified");
     }
@@ -96,12 +91,10 @@ class Engine {
       "create-store",
       "store",
       store,
-      "persistent",
-      persistent ? "y" : "n",
     ]);
   }
 
-  Future<dynamic> removeStore({bool persistent = false}) async {
+  Future<dynamic> removeStore() async {
     if (store == null) {
       throw ArgumentError("Store name must be specified");
     }
@@ -109,8 +102,6 @@ class Engine {
       "remove-store",
       "store",
       store,
-      "persistent",
-      persistent ? "y" : "n",
     ]);
   }
 
@@ -118,27 +109,19 @@ class Engine {
 
   Future<dynamic> grantTo(
     String owner,
-    String permission, {
+    Permission permission, {
     List<String>? keyspaces,
   }) async {
-    if (!validPermissions.contains(permission)) {
-      throw ArgumentError(
-        "Invalid permission: $permission. Valid: $validPermissions",
-      );
-    }
 
     if (store == null) {
       throw ArgumentError("Store must be specified");
     }
 
-    final command = [
+    final List<String> command = [
       "grant-to",
-      "owner",
-      owner,
-      "permission",
-      permission,
-      "store",
-      store!,
+      "owner", owner,
+      "permission", permission.toString(),
+      "store", store!,
     ];
 
     if (keyspaces != null && keyspaces.isNotEmpty) {
@@ -151,27 +134,19 @@ class Engine {
 
   Future<dynamic> revokeFrom(
     String owner,
-    String permission, {
+    Permission permission, {
     List<String>? keyspaces,
   }) async {
-    if (!validPermissions.contains(permission)) {
-      throw ArgumentError(
-        "Invalid permission: $permission. Valid: $validPermissions",
-      );
-    }
 
     if (store == null) {
       throw ArgumentError("Store must be specified");
     }
 
-    final command = [
+    final List<String> command = [
       "revoke-from",
-      "owner",
-      owner,
-      "permission",
-      permission,
-      "store",
-      store!,
+      "owner", owner,
+      "permission", permission.toString(),
+      "store", store!,
     ];
 
     if (keyspaces != null && keyspaces.isNotEmpty) {
@@ -187,10 +162,8 @@ class Engine {
   Future<dynamic> createOwner(String owner, String password) async {
     return await _executeQuery([
       "create-owner",
-      "username",
-      owner,
-      "password",
-      password,
+      "username", owner,
+      "password", password,
     ]);
   }
 
@@ -207,4 +180,5 @@ class Engine {
   Future<dynamic> getStructureAvailable() async {
     return await _executeQuery(["get-structure-available"]);
   }
+
 }
