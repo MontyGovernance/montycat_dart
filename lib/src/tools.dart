@@ -12,11 +12,11 @@ enum Permission {
 
 /// A class for handling timestamp conditions.
 class Timestamp {
-  final dynamic timestamp; // Single timestamp
-  final dynamic start;     // Range start
-  final dynamic end;       // Range end
-  final dynamic after;     // After condition
-  final dynamic before;    // Before condition
+  final String? timestamp; // Single timestamp
+  final String? start;     // Range start
+  final String? end;       // Range end
+  final String? after;     // After condition
+  final String? before;    // Before condition
 
   const Timestamp({
     this.timestamp,
@@ -26,7 +26,7 @@ class Timestamp {
     this.before,
   });
 
-  Map<String, dynamic> serialize() {
+  dynamic serialize() {
     if (start != null && end != null) {
       return {"range_timestamp": [start, end]};
     } else if (after != null) {
@@ -34,7 +34,7 @@ class Timestamp {
     } else if (before != null) {
       return {"before_timestamp": before};
     } else if (timestamp != null) {
-      return {"timestamp": timestamp};
+      return timestamp;
     }
     throw ArgumentError("Invalid timestamp configuration");
   }
@@ -45,7 +45,7 @@ class Pointer {
   final String keyspace;
   final dynamic key;
 
-  const Pointer(this.keyspace, this.key);
+const Pointer({required this.keyspace, required this.key});
 
   List<dynamic> serialize() {
     // returns [keyspace, key]

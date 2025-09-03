@@ -6,7 +6,7 @@ abstract class Schema {
 
   Schema(Map<String, dynamic> kwargs) {
     final hints = metadata();
-
+    schema = runtimeType.toString();
     // Assign provided values
     kwargs.forEach((key, value) {
       _fields[key] = value;
@@ -23,7 +23,6 @@ abstract class Schema {
     checkExtraFields(hints);
     validateTypes(hints);
 
-    schema = runtimeType.toString();
   }
 
   /// Each subclass must override to declare its expected field types.
@@ -100,6 +99,8 @@ abstract class Schema {
 
     if (pointers.isNotEmpty) _fields['pointers'] = pointers;
     if (timestamps.isNotEmpty) _fields['timestamps'] = timestamps;
+    // add schema
+    _fields['schema'] = schema;
   }
 
   @override

@@ -44,32 +44,35 @@ abstract class KV {
     store = engine.store;
   }
 
-  Future<dynamic> enforceSchema(Map<String, Type> schema) async {
-    // if (schema.isEmpty) {
-    //   throw Exception('No schema provided for enforcement');
-    // }
+  Future<dynamic> enforceSchema({required Map<String, Type> schema, required String schemaName}) async {
 
-    String parseType(Type fieldType) {
-      if (fieldType == String) {
-        return 'String';
-      } else if (fieldType == int) {
-        return 'Number';
-      } else if (fieldType == double) {
-        return 'Float';
-      } else if (fieldType == bool) {
-        return 'Boolean';
-      } else if (fieldType == List) {
-        return 'Array';
-      } else if (fieldType == Map) {
-        return 'Object';
-      } else if (fieldType == Pointer) {
-        return 'Pointer';
-      } else if (fieldType == Timestamp) {
-        return 'Timestamp';
-      } else {
-        throw TypeError();
-      }
+    if (schema.isEmpty) {
+      throw Exception('No schema provided for enforcement');
     }
+
+  String parseType(Type fieldType) {
+    final typeStr = fieldType.toString();
+
+    if (fieldType == String) {
+      return 'String';
+    } else if (fieldType == int) {
+      return 'Number';
+    } else if (fieldType == double) {
+      return 'Float';
+    } else if (fieldType == bool) {
+      return 'Boolean';
+    } else if (typeStr.startsWith('List<') || fieldType == List) {
+      return 'Array';
+    } else if (typeStr.startsWith('Map<') || fieldType == Map) {
+      return 'Object';
+    } else if (fieldType == Pointer) {
+      return 'Pointer';
+    } else if (fieldType == Timestamp) {
+      return 'Timestamp';
+    } else {
+      throw TypeError();
+    }
+  }
 
     final schemaTypes = <String, String>{};
     for (var entry in schema.entries) {
@@ -82,8 +85,8 @@ abstract class KV {
         'store', store,
         'keyspace', keyspace,
         'persistent', persistent ? 'y' : 'n',
-        'schema_name', schema.toString(),
-        'schema_content', schemaTypes.toString(),
+        'schema_name', schemaName,
+        'schema_content', jsonEncode(schemaTypes).toString(),
       ],
       'credentials': [username, password],
     };
@@ -248,6 +251,7 @@ abstract class KV {
     final query = convertToBinaryQuery(
       cls: this,
       searchCriteria: searchCriteria,
+      schema: schema
     );
 
     return await runQuery(host, port, query);
@@ -275,6 +279,7 @@ abstract class KV {
       cls: this,
       searchCriteria: searchCriteria,
       withPointers: withPointers,
+      schema: schema
     );
 
     return await runQuery(host, port, query);

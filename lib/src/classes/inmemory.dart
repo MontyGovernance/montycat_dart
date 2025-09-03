@@ -120,13 +120,13 @@ class KeyspaceInMemory extends KV {
     return await runQuery(host, port, query);
   }
 
-  Future<dynamic> updateValue({String? key, String? customKey, int expireSec = 0, Map<String, dynamic>? filters}) async {
+  Future<dynamic> updateValue({String? key, String? customKey, int expireSec = 0, Map<String, dynamic>? updates}) async {
 
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
 
-    if (filters == null || filters.isEmpty) {
+    if (updates == null || updates.isEmpty) {
       throw ArgumentError("No filters provided");
     }
     if (key == null || key.isEmpty) {
@@ -135,7 +135,7 @@ class KeyspaceInMemory extends KV {
 
     command = "update_value";
 
-    final query = convertToBinaryQuery(cls: this, key: key, value: filters, expireSec: expireSec);
+    final query = convertToBinaryQuery(cls: this, key: key, value: updates, expireSec: expireSec);
     return await runQuery(host, port, query);
   }
 

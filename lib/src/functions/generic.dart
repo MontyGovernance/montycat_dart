@@ -14,15 +14,15 @@ List<String> convertCustomKeys(List<dynamic> keys) {
   return keys.map((key) => convertCustomKey(key)).toList();
 }
 
-Map<String, dynamic> handlePointersForUpdate(Map<String, dynamic> value) {
-  final updatedValue = Map<String, dynamic>.from(value);
-  for (var entry in updatedValue.entries) {
-    if (entry.value is Pointer) {
-      updatedValue[entry.key] = (entry.value as Pointer).serialize();
-    }
-  }
-  return updatedValue;
-}
+// Map<String, dynamic> handlePointersForUpdate(Map<String, dynamic> value) {
+//   final updatedValue = Map<String, dynamic>.from(value);
+//   for (var entry in updatedValue.entries) {
+//     if (entry.value is Pointer) {
+//       updatedValue[entry.key] = (entry.value as Pointer).serialize();
+//     }
+//   }
+//   return updatedValue;
+// }
 
 Map<String, dynamic> convertCustomKeysValues(Map<String, dynamic> keysValues) {
   return {
@@ -37,6 +37,9 @@ Map<String, dynamic> modifyPointers(Map<String, dynamic> value) {
     for (var entry in updatedValue.entries) {
       if (entry.value is Pointer) {
         updatedValue[entry.key] = (entry.value as Pointer).serialize();
+      }
+      if (entry.value is Timestamp) {
+        updatedValue[entry.key] = (entry.value as Timestamp).serialize();
       }
     }
 
@@ -74,7 +77,7 @@ Uint8List convertToBinaryQuery({
   List<String>? bulkKeys,
   Map<String, dynamic>? bulkKeysValues,
   bool withPointers = false,
-
+  String? schema
 }) {
   searchCriteria = searchCriteria ?? {};
   value = value ?? {};
@@ -86,7 +89,6 @@ Uint8List convertToBinaryQuery({
     value = modifyPointers(value);
   }
 
-  String? schema;
   if (bulkValues.isNotEmpty && bulkValues.first is Map<String, dynamic>) {
     final schemas = bulkValues.map((item) => item['schema'] as String?).toSet();
     if (schemas.length > 1) {
@@ -122,16 +124,16 @@ Uint8List convertToBinaryQuery({
   final queryDict = {
     'schema': schema,
     'username':
-        cls.username, // Placeholder; replace with cls.username if available
-    'password': cls.password, // Placeholder
-    'keyspace': cls.keyspace, // Placeholder
-    'store': cls.store, // Placeholder
-    'persistent': cls.persistent, // Placeholder
-    'distributed': cls.distributed, // Placeholder
+        cls.username,
+    'password': cls.password,
+    'keyspace': cls.keyspace,
+    'store': cls.store,
+    'persistent': cls.persistent,
+    'distributed': cls.distributed,
     'limit_output': cls.limitOutput,
     'key': key?.toString(),
     'value': jsonEncode(value),
-    'command': cls.command, // Placeholder
+    'command': cls.command,
     'expire': expireSec,
     'bulk_values': bulkValues.map((v) => jsonEncode(v)).toList(),
     'bulk_keys': bulkKeys,
@@ -142,6 +144,8 @@ Uint8List convertToBinaryQuery({
     'search_criteria': jsonEncode(searchCriteria),
     'with_pointers': withPointers,
   };
+
+  //print('Final Query Dict: $queryDict');
 
   return Uint8List.fromList(jsonEncode(queryDict).codeUnits);
 }

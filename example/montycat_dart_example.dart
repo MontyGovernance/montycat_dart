@@ -1,12 +1,48 @@
-import 'package:montycat_dart/source.dart' show Engine, KeyspaceInMemory, KeyspacePersistent, Schema, makeSchema;
+import 'package:montycat_dart/source.dart' show DynamicSchema, Engine, KeyspaceInMemory, KeyspacePersistent, Pointer, Pointer, Timestamp, Schema, Timestamp, makeSchema;
 
 class User extends Schema {
   User(super.kwargs);
+
+  static String get schemaName => 'User';
 
   static Map<String, Type> get schemaMetadata => {
         'name': String,
         'age': int,
         'email': String,
+        'dep': Pointer,
+        'created': Timestamp
+      };
+
+  @override
+  Map<String, Type> metadata() => schemaMetadata;
+}
+
+class Deps extends Schema {
+  Deps(super.kwargs);
+
+  static String get schemaName => 'Deps';
+
+  static Map<String, Type> get schemaMetadata => {
+        'name': String,
+        'employees': int
+      };
+
+  @override
+  Map<String, Type> metadata() => schemaMetadata;
+}
+
+class NEWSCHEMA extends Schema {
+
+  NEWSCHEMA(super.kwargs);
+
+  static String get schemaName => 'NEWSCHEMA';
+
+  static Map<String, Type> get schemaMetadata => {
+        'field1': String,
+        'field2': int,
+        'field3': String,
+        'field4': Map<String, dynamic>,
+        'field5': List<String>
       };
 
   @override
@@ -25,80 +61,68 @@ Future<void> main() async {
 
   Engine engine1 = Engine.fromUri('montycat://EugeneAndMonty:12345@127.0.0.1:21210/DEFAULT_STORE1');
 
-  KeyspaceInMemory inMemoryKeyspace = KeyspaceInMemory(keyspace: 'test_keyspace');
+  KeyspaceInMemory inMemoryKeyspace = KeyspaceInMemory(keyspace: 'inmemory_keyspace1');
   inMemoryKeyspace.connectEngine(engine);
 
-  KeyspacePersistent persistentKeyspace = KeyspacePersistent(keyspace: 'persistent_keyspace');
+  KeyspaceInMemory inMemoryKeyspaceRelated = KeyspaceInMemory(keyspace: 'inmemory_keyspace_related');
+  inMemoryKeyspaceRelated.connectEngine(engine);
+
+  KeyspacePersistent persistentKeyspace = KeyspacePersistent(keyspace: 'persistent_keyspace1');
   persistentKeyspace.connectEngine(engine1);
 
-  User user = User({
-    'name': 'John Doe',
-    'age': 30,
-    'email': 'john.doe@example.com',
+  print(await inMemoryKeyspace.createKeyspace());
+  print(await persistentKeyspace.createKeyspace());
+  print(await inMemoryKeyspaceRelated.createKeyspace());
+
+  print(await inMemoryKeyspace.enforceSchema(schema: User.schemaMetadata, schemaName: User.schemaName));
+  print(await inMemoryKeyspaceRelated.enforceSchema(schema: Deps.schemaMetadata, schemaName: Deps.schemaName));
+  print(await inMemoryKeyspaceRelated.enforceSchema(schema: NEWSCHEMA.schemaMetadata, schemaName: NEWSCHEMA.schemaName));
+
+  var department = Deps({
+    'name': 'Engineering',
+    'employees': 12
   });
 
-  var hint = {
-    'name': String,
-    'age': int,
-    'email': String,
-  };
+  print(await inMemoryKeyspaceRelated.insertValue(value: department.serialize()));
 
-  var usr = makeSchema("USR", {'name': 'John Doe', 'age': 30, 'email': 'john.doe@example.com'}, hint);
-  print(usr.serialize());
-  print(('FIELD TYPES', user.metadata()));
+  List<dynamic> users = [];
 
-  print(user.serialize());
-
-  print(await engine1.createStore());
-  print(await engine1.getStructureAvailable());
-  print(await inMemoryKeyspace.createKeyspace());
-
-  print(await inMemoryKeyspace.insertValue(value: {
-    'name': 'John Doe',
-    'age': 30,
-    'email': 'john.doe@example.com',
-  }));
-
-  print(await inMemoryKeyspace.enforceSchema(User.schemaMetadata));
-
-  print(await inMemoryKeyspace.insertBulk(bulkValues: [
-    {
-      'name': 'Alice',
-      'age': 25,
-      'email': 'alice@example.com',
-    },
-    {
-      'name': 'Bob',
-      'age': 28,
-      'email': 'bob@example.com',
-    }
-  ]));
-  var keys = await inMemoryKeyspace.getKeys();
-
-  if (keys['status'] && keys['payload'] != null) {
-    print(keys);
-    // List<String> stringList = keys['payload'].cast<String>();
-    // print(await inMemoryKeyspace.getBulk(bulkKeys: stringList));
-    // print(await inMemoryKeyspace.updateValue(key: stringList[3], filters: {
-    //   'age': 31
-    // }));
+  for (num i = 0; i < 100; i++) {
+    users.add(User({
+      'name': 'User $i',
+      'age': 20 + i,
+      'email': 'user$i@example.com',
+      'dep': Pointer(keyspace: inMemoryKeyspaceRelated.keyspace, key: '295521135830941005163436314849878064088'),
+      'created': Timestamp(timestamp: DateTime.now().toUtc().toString())
+    }).serialize());
   }
 
-  print(await inMemoryKeyspace.lookupKeysWhere(searchCriteria: {
-    'age': 31
-  }));
+  print(await inMemoryKeyspace.insertBulk(bulkValues: users));
 
-  print(await inMemoryKeyspace.lookupValuesWhere(searchCriteria: {
-    'age': 31
-  }));
+  var keys = await inMemoryKeyspace.lookupKeysWhere(schema: User.schemaName, limit: [0, 10], searchCriteria: {'created': Timestamp(after: '2023-01-01')});
 
-  print(await inMemoryKeyspace.insertCustomKeyValue(customKey: 'BaileyJay', value: {
-    'name': 'Bailey Jay',
-    'age': 29,
-    'email': 'bailey.jay@example.com',
-  }));
+  if (keys['status']) {
 
-  print(await inMemoryKeyspace.getValue(customKey: 'BaileyJay'));
-  print(await inMemoryKeyspace.deleteKey(customKey: 'BaileyJay'));
+    Map<String, dynamic> bulkKV = {};
+
+    if (keys['payload'].length > 0) {
+      for (int i = 0; i < (keys['payload'] as List).length; i++) {
+        bulkKV[(keys['payload'] as List)[i]] = {'name': 'Denis', 'dep': Pointer(keyspace: 'inmemory_keyspace_related', key: '295521135830941005163436314849878064088')};
+      }
+    }
+
+    // convert to list of Strings
+    var bulk = (keys['payload'] as List).map((e) => e.toString()).toList();
+
+    print(await inMemoryKeyspace.updateBulk(bulkKeysValues: bulkKV));
+    print(await inMemoryKeyspace.getBulk(bulkKeys: bulk));
+
+    print(await inMemoryKeyspace.lookupKeysWhere(schema: User.schemaName));
+
+    //print(await inMemoryKeyspace.deleteBulk(bulkKeys: bulk));
+
+
+  }
+
 
 }
