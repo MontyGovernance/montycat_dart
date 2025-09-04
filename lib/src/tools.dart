@@ -1,4 +1,4 @@
-/// Enum for permission levels.
+/// Enum for permission levels in Montycat.
 enum Permission {
   read,
   write,
@@ -6,11 +6,13 @@ enum Permission {
 
   @override
   String toString() {
-    return name; // returns "read", "write", "all"
+    return name; // returns "read", "write", or "all"
   }
 }
 
 /// A class for handling timestamp conditions.
+///
+/// Supports single timestamps, ranges, or before/after conditions.
 class Timestamp {
   final String? timestamp; // Single timestamp
   final String? start;     // Range start
@@ -26,6 +28,7 @@ class Timestamp {
     this.before,
   });
 
+  /// Serializes the timestamp into a map or string for Montycat queries.
   dynamic serialize() {
     if (start != null && end != null) {
       return {"range_timestamp": [start, end]};
@@ -41,27 +44,31 @@ class Timestamp {
 }
 
 /// A simple class representing a reference pointer.
+///
+/// Pointers refer to a key in another keyspace.
 class Pointer {
   final String keyspace;
   final dynamic key;
 
-const Pointer({required this.keyspace, required this.key});
+  const Pointer({required this.keyspace, required this.key});
 
+  /// Serializes the pointer as `[keyspace, key]`.
   List<dynamic> serialize() {
-    // returns [keyspace, key]
     return [keyspace, key];
   }
 }
 
-/// A class for pagination limits.
+/// A class representing pagination limits.
+///
+/// Used for queries with `start` and `stop` bounds.
 class Limit {
   final int start;
   final int stop;
 
   const Limit({this.start = 0, this.stop = 0});
 
+  /// Serializes the limit into a map: `{"start": start, "stop": stop}`.
   Map<String, int> serialize() {
     return {"start": start, "stop": stop};
   }
 }
-

@@ -1,29 +1,41 @@
 import 'package:montycat_dart/src/tools.dart';
-
 import '../classes/kv.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import '../functions/generic.dart'
     show convertCustomKey, convertToBinaryQuery;
 
+/// Represents a persistent keyspace within MontyCat.
+///
+/// A persistent keyspace stores data on disk (not just in memory).
+/// Supports features like cache and compression settings, along with
+/// CRUD operations on keys and values.
 class KeyspacePersistent extends KV {
-
   String _keyspace;
   bool _distributed = false;
 
+  /// Create a new persistent keyspace instance.
+  ///
+  /// [keyspace] is the name of the keyspace.
   KeyspacePersistent({required String keyspace}) : _keyspace = keyspace;
 
+  /// Cache size for this keyspace (null = not set).
   int? cache;
+
+  /// Compression flag (true = enabled, false = disabled, null = not set).
   bool? compression;
 
+  /// Keyspace name getter.
   @override
   String get keyspace => _keyspace;
 
+  /// Keyspace name setter.
   @override
   set keyspace(String value) {
     _keyspace = value;
   }
 
+  /// Whether the keyspace is distributed.
   @override
   bool get distributed => _distributed;
 
@@ -32,6 +44,7 @@ class KeyspacePersistent extends KV {
     _distributed = value ?? false;
   }
 
+  /// Persistent flag is always true for this class.
   @override
   bool get persistent => true;
 
@@ -40,6 +53,7 @@ class KeyspacePersistent extends KV {
     super.persistent = value ?? true;
   }
 
+  /// Insert a custom key into the keyspace.
   Future<dynamic> insertCustomKey({required String customKey}) async {
     if (customKey.isEmpty) {
       throw ArgumentError("No custom key provided for insertion.");
@@ -52,7 +66,9 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query);
   }
 
-  Future<dynamic> insertCustomKeyValue({required String customKey, required dynamic value}) async {
+  /// Insert a custom key-value pair into the keyspace.
+  Future<dynamic> insertCustomKeyValue(
+      {required String customKey, required dynamic value}) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
     }
@@ -63,10 +79,12 @@ class KeyspacePersistent extends KV {
     final customKeyConverted = convertCustomKey(customKey);
     command = "insert_custom_key_value";
 
-    final query = convertToBinaryQuery(cls: this, key: customKeyConverted, value: value);
+    final query =
+        convertToBinaryQuery(cls: this, key: customKeyConverted, value: value);
     return await runQuery(host, port, query);
   }
 
+  /// Insert a value (auto-generated key will be used).
   Future<dynamic> insertValue({required dynamic value}) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
@@ -78,8 +96,9 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query);
   }
 
-  Future<dynamic> updateValue({String? key, String? customKey, Map<String, dynamic>? filters}) async {
-
+  /// Update a value in the keyspace, using a key or custom key and filters.
+  Future<dynamic> updateValue(
+      {String? key, String? customKey, Map<String, dynamic>? filters}) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -97,10 +116,11 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query);
   }
 
-  Future<dynamic> getKeys({ List<int> limit = const [] }) async {
+  /// Get all keys in the keyspace with optional [limit].
+  Future<dynamic> getKeys({List<int> limit = const []}) async {
     command = "get_keys";
 
-    // check limit
+    // Check limit
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
@@ -113,8 +133,8 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query);
   }
 
+  /// Insert multiple values at once.
   Future<dynamic> insertBulk({required List bulkValues}) async {
-
     if (bulkValues.isEmpty) {
       throw ArgumentError("No values provided for bulk insertion.");
     }
@@ -124,6 +144,8 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query);
   }
 
+  /// Creates a new keyspace with the current configuration.
+  ///
   Future<dynamic> createKeyspace() async {
     final queryMap = {
       "raw": [
@@ -142,19 +164,24 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query);
   }
 
-    Future<dynamic> updateCacheAndCompression() async {
-
+  /// Update cache and compression settings for this keyspace.
+  Future<dynamic> updateCacheAndCompression() async {
     if (!persistent) {
-      throw Exception("Cache and compression settings can only be updated for persistent keyspaces.");
+      throw Exception(
+          "Cache and compression settings can only be updated for persistent keyspaces.");
     }
 
     final queryMap = {
       "raw": [
         "update-cache-compression",
-        "store", store,
-        "keyspace", keyspace,
-        "cache", cache ?? "0",
-        "compression", compression == true ? "y" : "n"
+        "store",
+        store,
+        "keyspace",
+        keyspace,
+        "cache",
+        cache ?? "0",
+        "compression",
+        compression == true ? "y" : "n"
       ],
       "credentials": [username, password]
     };
@@ -162,5 +189,4 @@ class KeyspacePersistent extends KV {
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
     return await runQuery(host, port, query);
   }
-
 }

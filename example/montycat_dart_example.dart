@@ -92,12 +92,16 @@ Future<void> main() async {
       'name': 'User $i',
       'age': 20 + i,
       'email': 'user$i@example.com',
-      'dep': Pointer(keyspace: inMemoryKeyspaceRelated.keyspace, key: '295521135830941005163436314849878064088'),
+      'dep': Pointer(keyspace: inMemoryKeyspaceRelated.keyspace, key: '302180670339853181062949189640217786021'),
       'created': Timestamp(timestamp: DateTime.now().toUtc().toString())
     }).serialize());
   }
 
   print(await inMemoryKeyspace.insertBulk(bulkValues: users));
+  print("PERS");
+  print(await persistentKeyspace.insertBulk(bulkValues: [
+    {'user': 'user1@example.com'}, {'user': 'user2@example.com'}
+  ]));
 
   var keys = await inMemoryKeyspace.lookupKeysWhere(schema: User.schemaName, limit: [0, 10], searchCriteria: {'created': Timestamp(after: '2023-01-01')});
 
@@ -107,7 +111,7 @@ Future<void> main() async {
 
     if (keys['payload'].length > 0) {
       for (int i = 0; i < (keys['payload'] as List).length; i++) {
-        bulkKV[(keys['payload'] as List)[i]] = {'name': 'Denis', 'dep': Pointer(keyspace: 'inmemory_keyspace_related', key: '295521135830941005163436314849878064088')};
+        bulkKV[(keys['payload'] as List)[i]] = {'name': 'James', 'dep': Pointer(keyspace: 'inmemory_keyspace_related', key: '302180670339853181062949189640217786021')};
       }
     }
 

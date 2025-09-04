@@ -4,17 +4,20 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'tools.dart' show Permission;
 
-/// The Engine class provides methods to interact with a Montycat server.
-/// It allows you to create and delete stores, manage owners, grant/revoke
-/// permissions, and retrieve system structure.
+/// The `Engine` class provides methods to interact with a Montycat server.
 ///
-/// Args:
-///   host: The hostname of the Montycat server.
-///   port: The port number of the Montycat server.
-///   username: The username for authentication.
-///   password: The password for authentication.
-///   store: The name of the store to operate on (optional).
+/// It allows you to:
+/// - Create and delete stores
+/// - Manage owners
+/// - Grant or revoke permissions
+/// - Retrieve the system structure
 ///
+/// Required parameters:
+/// - `host`: Montycat server hostname
+/// - `port`: Port number of the Montycat server
+/// - `username`: Authentication username
+/// - `password`: Authentication password
+/// - `store`: Optional store name to operate on
 class Engine {
   Engine({
     required this.host,
@@ -24,15 +27,15 @@ class Engine {
     this.store,
   });
 
-  // static const Set<String> validPermissions ={'read', 'write', 'all'};
-
   final String host; 
   final int port;
   final String username;
   final String password;
   late String? store;
 
-  /// Creates an Engine instance from a URI string in the format:
+  /// Creates an `Engine` instance from a URI string.
+  ///
+  /// Expected URI format:
   /// `montycat://username:password@host:port[/store]`
   factory Engine.fromUri(String uri) {
     final parsed = Uri.parse(uri);
@@ -65,6 +68,7 @@ class Engine {
     );
   }
 
+  /// Internal helper to execute any Montycat command.
   Future<dynamic> _executeQuery(List<dynamic> command) async {
     Map<String, dynamic> query = {
       "raw": command,
@@ -72,21 +76,12 @@ class Engine {
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
-    // print('Sending query: $queryJson');
     return await sendData(host, port, queryBytes);
   }
 
-  // ---------------- Store Management ----------------
-
-  /// Creates a new store.
-  ///
-  /// Args:
-  ///   persistent: Whether the store should be persistent (default: false).
-  ///
+  /// Creates a new store on the Montycat server.
   Future<dynamic> createStore() async {
-    if (store == null) {
-      throw ArgumentError("Store name must be specified");
-    }
+    if (store == null) throw ArgumentError("Store name must be specified");
     return await _executeQuery([
       "create-store",
       "store",
@@ -94,10 +89,9 @@ class Engine {
     ]);
   }
 
+  /// Removes an existing store from the Montycat server.
   Future<dynamic> removeStore() async {
-    if (store == null) {
-      throw ArgumentError("Store name must be specified");
-    }
+    if (store == null) throw ArgumentError("Store name must be specified");
     return await _executeQuery([
       "remove-store",
       "store",
@@ -105,17 +99,15 @@ class Engine {
     ]);
   }
 
-  // ---------------- Permissions ----------------
-
+  /// Grants a permission to an owner.
+  ///
+  /// Optional `keyspaces` can be specified to limit scope.
   Future<dynamic> grantTo(
     String owner,
     Permission permission, {
     List<String>? keyspaces,
   }) async {
-
-    if (store == null) {
-      throw ArgumentError("Store must be specified");
-    }
+    if (store == null) throw ArgumentError("Store must be specified");
 
     final List<String> command = [
       "grant-to",
@@ -132,15 +124,15 @@ class Engine {
     return await _executeQuery(command);
   }
 
+  /// Revokes a permission from an owner.
+  ///
+  /// Optional `keyspaces` can be specified to limit scope.
   Future<dynamic> revokeFrom(
     String owner,
     Permission permission, {
     List<String>? keyspaces,
   }) async {
-
-    if (store == null) {
-      throw ArgumentError("Store must be specified");
-    }
+    if (store == null) throw ArgumentError("Store must be specified");
 
     final List<String> command = [
       "revoke-from",
@@ -157,8 +149,7 @@ class Engine {
     return await _executeQuery(command);
   }
 
-  // ---------------- Owner Management ----------------
-
+  /// Creates a new owner with the given username and password.
   Future<dynamic> createOwner(String owner, String password) async {
     return await _executeQuery([
       "create-owner",
@@ -167,18 +158,21 @@ class Engine {
     ]);
   }
 
+  /// Removes an existing owner.
   Future<dynamic> removeOwner(String owner) async {
-    return await _executeQuery(["remove-owner", "username", owner]);
+    return await _executeQuery([
+      "remove-owner",
+      "username", owner,
+    ]);
   }
 
+  /// Lists all existing owners in the system.
   Future<dynamic> listOwners() async {
     return await _executeQuery(["list-owners"]);
   }
 
-  // ---------------- Structure ----------------
-
+  /// Retrieves the system structure available on the server.
   Future<dynamic> getStructureAvailable() async {
     return await _executeQuery(["get-structure-available"]);
   }
-
 }
