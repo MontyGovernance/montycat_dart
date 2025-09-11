@@ -126,9 +126,15 @@ class KeyspaceInMemory extends KV {
   }
 
   /// Retrieves all keys stored in this keyspace.
-  Future<dynamic> getKeys() async {
+  Future<dynamic> getKeys({List<String> volumes = const [], bool latestVolume = false}) async {
+
+    if (latestVolume && volumes.isNotEmpty) {
+      throw ArgumentError(
+          "Select either latest volume or volumes list, not both.");
+    }
+
     command = "get_keys";
-    final query = convertToBinaryQuery(cls: this);
+    final query = convertToBinaryQuery(cls: this, volumes: volumes, latestVolume: latestVolume);
     return await runQuery(host, port, query);
   }
 

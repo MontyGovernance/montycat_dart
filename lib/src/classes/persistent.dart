@@ -117,7 +117,13 @@ class KeyspacePersistent extends KV {
   }
 
   /// Get all keys in the keyspace with optional [limit].
-  Future<dynamic> getKeys({List<int> limit = const []}) async {
+  Future<dynamic> getKeys({List<int> limit = const [], List<String> volumes = const [], bool latestVolume = false}) async {
+
+    if (latestVolume && volumes.isNotEmpty) {
+      throw ArgumentError(
+          "Select either latest volume or volumes list, not both.");
+    }
+
     command = "get_keys";
 
     // Check limit
@@ -129,7 +135,7 @@ class KeyspacePersistent extends KV {
       );
     }
 
-    final query = convertToBinaryQuery(cls: this);
+    final query = convertToBinaryQuery(cls: this, volumes: volumes, latestVolume: latestVolume);
     return await runQuery(host, port, query);
   }
 

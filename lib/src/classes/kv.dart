@@ -145,7 +145,15 @@ abstract class KV {
     String? key,
     String? customKey,
     bool withPointers = false,
+    bool keyIncluded = false,
+    bool pointersMetadata = false,
   }) async {
+
+    if (pointersMetadata && withPointers) {
+      throw ArgumentError(
+          "You select both pointers value and pointers metadata. Choose one.");
+    }
+
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -160,6 +168,8 @@ abstract class KV {
       cls: this,
       key: key,
       withPointers: withPointers,
+      keyIncluded: keyIncluded,
+      pointersMetadata: pointersMetadata,
     );
 
     return await runQuery(host, port, query);
@@ -214,7 +224,15 @@ abstract class KV {
     List<String> bulkCustomKeys = const [],
     List<int> limit = const [],
     bool withPointers = false,
+    bool keyIncluded = false,
+    bool pointersMetadata = false,
   }) async {
+
+    if (pointersMetadata && withPointers) {
+      throw ArgumentError(
+          "You select both pointers value and pointers metadata. Choose one.");
+    }
+
     if (bulkCustomKeys.isNotEmpty) {
       bulkKeys = [...bulkKeys, ...bulkCustomKeys];
     }
@@ -235,6 +253,8 @@ abstract class KV {
       cls: this,
       bulkKeys: bulkKeys,
       withPointers: withPointers,
+      keyIncluded: keyIncluded,
+      pointersMetadata: pointersMetadata,
     );
 
     return await runQuery(host, port, query);
@@ -291,7 +311,15 @@ abstract class KV {
     String? schema,
     Map<String, dynamic> searchCriteria = const {},
     bool withPointers = false,
+    bool keyIncluded = false,
+    bool pointersMetadata = false,
   }) async {
+
+    if (pointersMetadata && withPointers) {
+      throw ArgumentError(
+          "You select both pointers value and pointers metadata. Choose one.");
+    }
+
     command = "lookup_values";
 
     if (limit.length == 2) {
@@ -305,6 +333,8 @@ abstract class KV {
       searchCriteria: searchCriteria,
       withPointers: withPointers,
       schema: schema,
+      keyIncluded: keyIncluded,
+      pointersMetadata: pointersMetadata,
     );
 
     return await runQuery(host, port, query);

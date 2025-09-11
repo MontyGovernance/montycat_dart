@@ -92,7 +92,7 @@ Future<void> main() async {
       'name': 'User $i',
       'age': 20 + i,
       'email': 'user$i@example.com',
-      'dep': Pointer(keyspace: inMemoryKeyspaceRelated.keyspace, key: '302180670339853181062949189640217786021'),
+      'dep': Pointer(keyspace: inMemoryKeyspaceRelated.keyspace, key: '135113904380619923677927799672778281922'),
       'created': Timestamp(timestamp: DateTime.now().toUtc().toString())
     }).serialize());
   }
@@ -111,7 +111,7 @@ Future<void> main() async {
 
     if (keys['payload'].length > 0) {
       for (int i = 0; i < (keys['payload'] as List).length; i++) {
-        bulkKV[(keys['payload'] as List)[i]] = {'name': 'James', 'dep': Pointer(keyspace: 'inmemory_keyspace_related', key: '302180670339853181062949189640217786021')};
+        bulkKV[(keys['payload'] as List)[i]] = {'name': 'James', 'dep': Pointer(keyspace: 'inmemory_keyspace_related', key: '135113904380619923677927799672778281922')};
       }
     }
 
@@ -119,13 +119,17 @@ Future<void> main() async {
     var bulk = (keys['payload'] as List).map((e) => e.toString()).toList();
 
     print(await inMemoryKeyspace.updateBulk(bulkKeysValues: bulkKV));
-    print(await inMemoryKeyspace.getBulk(bulkKeys: bulk));
+    print(await inMemoryKeyspace.getBulk(bulkKeys: bulk, keyIncluded: true));
 
     print(await inMemoryKeyspace.lookupKeysWhere(schema: User.schemaName));
 
+    print(await inMemoryKeyspaceRelated.getLen());
+    print(await engine1.getStructureAvailable());
+    print(await engine.getStructureAvailable());
+
+    print("LATEST");
+    print(await inMemoryKeyspace.getKeys(volumes: ['0']));
     //print(await inMemoryKeyspace.deleteBulk(bulkKeys: bulk));
-
-
   }
 
 

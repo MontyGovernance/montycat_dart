@@ -81,7 +81,11 @@ Uint8List convertToBinaryQuery({
   List<String>? bulkKeys,
   Map<String, dynamic>? bulkKeysValues,
   bool withPointers = false,
-  String? schema
+  String? schema,
+  List<String>? volumes,
+  bool latestVolume = false,
+  bool keyIncluded = false,
+  bool pointersMetadata = false,
 }) {
   searchCriteria = searchCriteria ?? {};
   value = value ?? {};
@@ -150,6 +154,10 @@ Uint8List convertToBinaryQuery({
     },
     'search_criteria': jsonEncode(searchCriteria),
     'with_pointers': withPointers,
+    'volumes': volumes ?? [],
+    'latest_volume': latestVolume,
+    'key_included': keyIncluded,
+    'pointers_metadata': pointersMetadata,
   };
 
   return Uint8List.fromList(jsonEncode(queryDict).codeUnits);
