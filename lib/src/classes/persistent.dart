@@ -1,4 +1,4 @@
-import 'package:montycat_dart/src/tools.dart';
+import 'package:montycat/src/tools.dart';
 import '../classes/kv.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -51,6 +51,27 @@ class KeyspacePersistent extends KV {
   @override
   set persistent(bool? value) {
     super.persistent = value ?? true;
+  }
+
+  Future<dynamic> subscribe({String? key, String? customKey, void Function(dynamic)? callback}) async {
+    if (customKey != null && customKey.isNotEmpty) {
+      key = convertCustomKey(customKey);
+    }
+
+    port += 1;
+
+    var queryObj = {
+      "subscribe": true,
+      "store": store,
+      "keyspace": keyspace,
+      "username": username,
+      "password": password,
+      "key": key,
+    };
+
+    final query = Uint8List.fromList(utf8.encode(jsonEncode(queryObj)));
+
+    return await runQuery(host, port, query, callback: callback);
   }
 
   /// Insert a custom key into the keyspace.

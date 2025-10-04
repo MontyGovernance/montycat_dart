@@ -1,39 +1,33 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# MontyCat Dart Client 🚀
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages). 
+[![pub package](https://img.shields.io/pub/v/montycat_dart.svg)](https://pub.dev/packages/montycat_dart)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages). 
--->
+MontyCat Dart client for interacting with the **Montycat database**.
+It combines the flexibility of NoSQL with SQL-like features, high performance, Data Mesh design, and real-time subscriptions.
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+---
 
-## Features
+## ✨ Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- ⚡ **High Performance**: Fast reads/writes with async/await support.
+- 💾 **In-Memory & Persistent**: Choose between memory-first speed or durable persistence.
+- 🔄 **Async Operations**: Non-blocking I/O, great for real-time apps.
+- 🗂️ **Data Mesh Architecture**: Decentralized data ownership for scalable systems.
+- 📡 **Subscriptions**: Subscribe to keyspaces or individual keys in real time.
+- 🛡️ **Robust & Secure**: Built for reliability and compliance.
+- 🏆 **Best of Both Worlds**: Combines the flexibility of NoSQL with familiar SQL-like features.
 
-## Getting started
+---
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+## 📦 Installation
 
-## Usage
+Add `montycat_dart` to your `pubspec.yaml`:
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
-
-```dart
-const like = 'sample';
+```yaml
+dependencies:
+  montycat_dart: ^1.0.1
 ```
 
-## Additional information
+## Quick Start
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.

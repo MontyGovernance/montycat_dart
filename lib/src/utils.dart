@@ -3,6 +3,24 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 
+/// Handle for managing active subscriptions.
+/// Allows stopping the subscription and closing the socket.
+/// When stopped, no further callbacks will be invoked.
+/// Used in subscribe queries.
+class SubscriptionHandle {
+  final Socket _socket;
+  bool _stopped = false;
+
+  SubscriptionHandle(this._socket);
+
+  void stop() {
+    _stopped = true;
+    _socket.destroy();
+  }
+
+  bool get stopped => _stopped;
+}
+
 /// Sends data asynchronously to a remote server and handles the response.
 ///
 /// Args:
@@ -22,38 +40,43 @@ Future<dynamic> sendData(
   String host,
   int port,
   Uint8List query, {
-  void Function(String)? callback,
+  void Function(dynamic)? callback,
 }) async {
   try {
-    var socket = await Socket.connect(
-      host,
-      port,
-    ).timeout(const Duration(seconds: 10));
+    var socket = await Socket.connect(host, port, timeout: Duration(seconds: 10));
     var queryStr = utf8.decode(query, allowMalformed: true);
     bool isSubscribe = queryStr.contains("subscribe");
 
-    socket.add([...query, 10]); // 10 is ASCII newline (\n)
+    socket.add([...query, 10]);
     await socket.flush();
-    await Future.delayed(const Duration(milliseconds: 100));
 
-    var stream = socket
+    var lines = socket
         .cast<List<int>>()
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .timeout(const Duration(seconds: 120));
+        .asBroadcastStream();
 
     if (isSubscribe) {
-      await for (var line in stream) {
-        if (callback != null) {
-          callback(line.trim());
+
+      final handle = SubscriptionHandle(socket);
+
+      lines.listen((line) {
+        if (!handle.stopped && callback != null) {
+          try {
+            var parsed = recursiveParseJson(line.trim());
+            callback(parsed);
+          } catch (e) {
+            print("Error occurred: $e");
+            callback("Failed to parse: $line");
+          }
         }
-      }
-      await socket.close();
-      return null;
+      });
+
+      return handle;
     } else {
-      var line = await stream.first;
+      var line = await lines.first.timeout(Duration(seconds: 120));
       await socket.close();
-      return recursiveParseOrjson(line.trim());
+      return recursiveParseJson(line.trim());
     }
   } on SocketException catch (e) {
     return "SocketError: $e (address: $host, port: $port)";
@@ -63,6 +86,7 @@ Future<dynamic> sendData(
     return "Error: $e";
   }
 }
+
 
 /// Recursively parses nested JSON strings in the provided data.
 ///
@@ -75,21 +99,21 @@ Future<dynamic> sendData(
 ///
 /// Returns:
 ///   A fully parsed Dart object with all nested JSON strings converted, except for u128 values.
-dynamic recursiveParseOrjson(dynamic data) {
+dynamic recursiveParseJson(dynamic data) {
   if (data is String) {
     if (isU128(data)) {
       return data;
     }
     try {
       var parsed = json.decode(data);
-      return recursiveParseOrjson(parsed);
+      return recursiveParseJson(parsed);
     } on FormatException {
       return data;
     }
   } else if (data is Map) {
-    return data.map((key, value) => MapEntry(key, recursiveParseOrjson(value)));
+    return data.map((key, value) => MapEntry(key, recursiveParseJson(value)));
   } else if (data is List) {
-    return data.map(recursiveParseOrjson).toList();
+    return data.map(recursiveParseJson).toList();
   } else {
     return data;
   }

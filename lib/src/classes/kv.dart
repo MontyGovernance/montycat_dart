@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:montycat_dart/source.dart';
+import 'package:montycat/source.dart';
 
 import '../tools.dart' show Limit, Pointer, Timestamp;
 import '../utils.dart' show sendData;
@@ -51,8 +51,8 @@ abstract class KV {
   }
 
   /// Sends a query to the server.
-  Future<dynamic> runQuery(String host, int port, Uint8List query) async {
-    return await sendData(host, port, query);
+  Future<dynamic> runQuery(String host, int port, Uint8List query, {void Function(dynamic)? callback}) async {
+    return await sendData(host, port, query, callback: callback);
   }
 
   /// Connects to the database engine using an [Engine] object.
