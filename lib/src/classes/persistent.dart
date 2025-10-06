@@ -2,8 +2,7 @@ import 'package:montycat/src/tools.dart';
 import '../classes/kv.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import '../functions/generic.dart'
-    show convertCustomKey, convertToBinaryQuery;
+import '../functions/generic.dart' show convertCustomKey, convertToBinaryQuery;
 
 /// Represents a persistent keyspace within MontyCat.
 ///
@@ -53,7 +52,18 @@ class KeyspacePersistent extends KV {
     super.persistent = value ?? true;
   }
 
-  Future<dynamic> subscribe({String? key, String? customKey, void Function(dynamic)? callback}) async {
+  /// Subscribe to changes on a specific key or custom key.
+  /// If [callback] is provided, it will be called on updates.
+  /// If no key is provided, subscribes to all changes in the keyspace.
+  /// If [customKey] is provided, it will be used instead of [key].
+  /// Note: Each subscription increments the port by 1.
+  /// Make sure to manage ports accordingly.
+  ///
+  Future<dynamic> subscribe({
+    String? key,
+    String? customKey,
+    void Function(dynamic)? callback,
+  }) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -75,6 +85,7 @@ class KeyspacePersistent extends KV {
   }
 
   /// Insert a custom key into the keyspace.
+  /// Throws an [ArgumentError] if [customKey] is empty.
   Future<dynamic> insertCustomKey({required String customKey}) async {
     if (customKey.isEmpty) {
       throw ArgumentError("No custom key provided for insertion.");
@@ -88,8 +99,11 @@ class KeyspacePersistent extends KV {
   }
 
   /// Insert a custom key-value pair into the keyspace.
-  Future<dynamic> insertCustomKeyValue(
-      {required String customKey, required dynamic value}) async {
+  /// Throws an [ArgumentError] if [customKey] or [value] is empty.
+  Future<dynamic> insertCustomKeyValue({
+    required String customKey,
+    required dynamic value,
+  }) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
     }
@@ -100,12 +114,16 @@ class KeyspacePersistent extends KV {
     final customKeyConverted = convertCustomKey(customKey);
     command = "insert_custom_key_value";
 
-    final query =
-        convertToBinaryQuery(cls: this, key: customKeyConverted, value: value);
+    final query = convertToBinaryQuery(
+      cls: this,
+      key: customKeyConverted,
+      value: value,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Insert a value (auto-generated key will be used).
+  /// Throws an [ArgumentError] if [value] is empty.
   Future<dynamic> insertValue({required dynamic value}) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
@@ -118,8 +136,15 @@ class KeyspacePersistent extends KV {
   }
 
   /// Update a value in the keyspace, using a key or custom key and filters.
-  Future<dynamic> updateValue(
-      {String? key, String? customKey, Map<String, dynamic>? filters}) async {
+  /// Throws an [ArgumentError] if no filters or key are provided.
+  /// If [customKey] is provided, it will be used instead of [key].
+  /// The [filters] map contains the fields to update and their new values.
+  /// Example: filters = {'field1': 'newValue', 'field2': 42}
+  Future<dynamic> updateValue({
+    String? key,
+    String? customKey,
+    Map<String, dynamic>? filters,
+  }) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -138,11 +163,19 @@ class KeyspacePersistent extends KV {
   }
 
   /// Get all keys in the keyspace with optional [limit].
-  Future<dynamic> getKeys({List<int> limit = const [], List<String> volumes = const [], bool latestVolume = false}) async {
-
+  /// If [latestVolume] is true, only the latest volume is queried.
+  /// If [volumes] is provided, only those volumes are queried.
+  /// Throws an [ArgumentError] if both [latestVolume] and [volumes] are set.
+  /// Throws an [ArgumentError] if [limit] is not a list of two integers.
+  Future<dynamic> getKeys({
+    List<int> limit = const [],
+    List<String> volumes = const [],
+    bool latestVolume = false,
+  }) async {
     if (latestVolume && volumes.isNotEmpty) {
       throw ArgumentError(
-          "Select either latest volume or volumes list, not both.");
+        "Select either latest volume or volumes list, not both.",
+      );
     }
 
     command = "get_keys";
@@ -156,11 +189,16 @@ class KeyspacePersistent extends KV {
       );
     }
 
-    final query = convertToBinaryQuery(cls: this, volumes: volumes, latestVolume: latestVolume);
+    final query = convertToBinaryQuery(
+      cls: this,
+      volumes: volumes,
+      latestVolume: latestVolume,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Insert multiple values at once.
+  /// Throws an [ArgumentError] if [bulkValues] is empty.
   Future<dynamic> insertBulk({required List bulkValues}) async {
     if (bulkValues.isEmpty) {
       throw ArgumentError("No values provided for bulk insertion.");
@@ -172,19 +210,25 @@ class KeyspacePersistent extends KV {
   }
 
   /// Creates a new keyspace with the current configuration.
-  ///
+  /// Throws an [ArgumentError] if [store] or [keyspace] is empty.
   Future<dynamic> createKeyspace() async {
     final queryMap = {
       "raw": [
         "create-keyspace",
-        "store", store,
-        "keyspace", keyspace,
-        "persistent", persistent ? "y" : "n",
-        "distributed", distributed ? "y" : "n",
-        "cache", cache ?? "0",
-        "compression", compression == true ? "y" : "n"
+        "store",
+        store,
+        "keyspace",
+        keyspace,
+        "persistent",
+        persistent ? "y" : "n",
+        "distributed",
+        distributed ? "y" : "n",
+        "cache",
+        cache ?? "0",
+        "compression",
+        compression == true ? "y" : "n",
       ],
-      "credentials": [username, password]
+      "credentials": [username, password],
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
@@ -192,10 +236,12 @@ class KeyspacePersistent extends KV {
   }
 
   /// Update cache and compression settings for this keyspace.
+  /// Throws an [ArgumentError] if [cache] or [compression] is empty.
   Future<dynamic> updateCacheAndCompression() async {
     if (!persistent) {
       throw Exception(
-          "Cache and compression settings can only be updated for persistent keyspaces.");
+        "Cache and compression settings can only be updated for persistent keyspaces.",
+      );
     }
 
     final queryMap = {
@@ -208,9 +254,9 @@ class KeyspacePersistent extends KV {
         "cache",
         cache ?? "0",
         "compression",
-        compression == true ? "y" : "n"
+        compression == true ? "y" : "n",
       ],
-      "credentials": [username, password]
+      "credentials": [username, password],
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));

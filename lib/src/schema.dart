@@ -72,41 +72,43 @@ abstract class Schema {
       if (expectedType == Pointer) {
         if (actualValue is! Pointer && actualValue != null) {
           throw ArgumentError(
-            "Attribute '$attribute' should be Pointer, got ${actualValue.runtimeType}");
+            "Attribute '$attribute' should be Pointer, got ${actualValue.runtimeType}",
+          );
         }
         if (actualValue != null) {
           pointers[attribute] = actualValue.serialize();
           _fields.remove(attribute);
         }
       }
-
       // Handle Timestamp
       else if (expectedType == Timestamp) {
         if (actualValue is! Timestamp && actualValue != null) {
           throw ArgumentError(
-            "Attribute '$attribute' should be Timestamp, got ${actualValue.runtimeType}");
+            "Attribute '$attribute' should be Timestamp, got ${actualValue.runtimeType}",
+          );
         }
         if (actualValue != null) {
           timestamps[attribute] = actualValue.serialize();
           _fields.remove(attribute);
         }
       }
-
       // Handle lists of types
       else if (expectedType is List<Type>) {
-        final ok = actualValue == null ||
+        final ok =
+            actualValue == null ||
             expectedType.any((t) => actualValue.runtimeType == t);
         if (!ok) {
           throw ArgumentError(
-            "Attribute '$attribute' should be one of $expectedType, got ${actualValue.runtimeType}");
+            "Attribute '$attribute' should be one of $expectedType, got ${actualValue.runtimeType}",
+          );
         }
       }
-
       // Normal type check
       else {
         if (actualValue != null && actualValue.runtimeType != expectedType) {
           throw ArgumentError(
-            "Attribute '$attribute' should be $expectedType, got ${actualValue.runtimeType}");
+            "Attribute '$attribute' should be $expectedType, got ${actualValue.runtimeType}",
+          );
         }
       }
     });
@@ -128,8 +130,12 @@ abstract class Schema {
 /// A dynamic schema implementation, where field types are provided at runtime
 class DynamicSchema extends Schema {
   final Map<String, Type> _hints;
+  final String name;
 
-  DynamicSchema(super.kwargs, this._hints);
+  DynamicSchema(super.fields, this._hints, this.name);
+
+  @override
+  String get schema => name;
 
   @override
   Map<String, Type> metadata() => _hints;
@@ -139,7 +145,7 @@ class DynamicSchema extends Schema {
 Schema makeSchema(
   String name,
   Map<String, dynamic> fields,
-  Map<String, Type> hints
+  Map<String, Type> hints,
 ) {
-  return DynamicSchema(fields, hints);
+  return DynamicSchema(fields, hints, name);
 }

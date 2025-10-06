@@ -51,7 +51,12 @@ abstract class KV {
   }
 
   /// Sends a query to the server.
-  Future<dynamic> runQuery(String host, int port, Uint8List query, {void Function(dynamic)? callback}) async {
+  Future<dynamic> runQuery(
+    String host,
+    int port,
+    Uint8List query, {
+    void Function(dynamic)? callback,
+  }) async {
     return await sendData(host, port, query, callback: callback);
   }
 
@@ -65,9 +70,9 @@ abstract class KV {
   }
 
   /// Enforces a schema for the current keyspace.
-  /// 
+  ///
   /// Converts Dart [Type]s to database-supported types and sends an
-  /// "enforce-schema" query.
+  /// 'enforce-schema' query.
   Future<dynamic> enforceSchema({
     required Map<String, Type> schema,
     required String schemaName,
@@ -109,11 +114,16 @@ abstract class KV {
     final queryMap = {
       'raw': [
         'enforce-schema',
-        'store', store,
-        'keyspace', keyspace,
-        'persistent', persistent ? 'y' : 'n',
-        'schema_name', schemaName,
-        'schema_content', jsonEncode(schemaTypes).toString(),
+        'store',
+        store,
+        'keyspace',
+        keyspace,
+        'persistent',
+        persistent ? 'y' : 'n',
+        'schema_name',
+        schemaName,
+        'schema_content',
+        jsonEncode(schemaTypes).toString(),
       ],
       'credentials': [username, password],
     };
@@ -123,14 +133,19 @@ abstract class KV {
   }
 
   /// Removes a previously enforced schema from the keyspace.
+  /// Throws an [ArgumentError] if [schema] is empty.
   Future<dynamic> removeEnforcedSchema(String schema) async {
     final queryMap = {
       'raw': [
         'remove-enforced-schema',
-        'store', store,
-        'keyspace', keyspace,
-        'persistent', persistent ? 'y' : 'n',
-        'schema_name', schema,
+        'store',
+        store,
+        'keyspace',
+        keyspace,
+        'persistent',
+        persistent ? 'y' : 'n',
+        'schema_name',
+        schema,
       ],
       'credentials': [username, password],
     };
@@ -141,6 +156,10 @@ abstract class KV {
 
   /// Retrieves a single value by [key] or [customKey].
   /// Optionally fetches associated pointers.
+  /// - [withPointers]: If true, includes pointer values.
+  /// - [keyIncluded]: If true, includes the key in the response.
+  /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
+  /// Throws an [ArgumentError] if no valid key is provided.
   Future<dynamic> getValue({
     String? key,
     String? customKey,
@@ -148,10 +167,10 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-
     if (pointersMetadata && withPointers) {
       throw ArgumentError(
-          "You select both pointers value and pointers metadata. Choose one.");
+        "You select both pointers value and pointers metadata. Choose one.",
+      );
     }
 
     if (customKey != null && customKey.isNotEmpty) {
@@ -176,6 +195,7 @@ abstract class KV {
   }
 
   /// Deletes a single key from the store.
+  /// Throws an [ArgumentError] if no valid key is provided.
   Future<dynamic> deleteKey({String? key, String? customKey}) async {
     if (key != null && customKey != null) {
       throw ArgumentError("Provide either 'key' or 'customKey', not both.");
@@ -197,6 +217,8 @@ abstract class KV {
   }
 
   /// Deletes multiple keys in one query.
+  /// Throws an [ArgumentError] if no valid keys are provided.
+  /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
   Future<dynamic> deleteBulk({
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
@@ -217,8 +239,12 @@ abstract class KV {
   }
 
   /// Fetches multiple values at once.
-  /// 
   /// Supports [limit] as `[start, stop]` and optional [withPointers].
+  /// - [keyIncluded]: If true, includes the key in the response.
+  /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
+  /// Throws an [ArgumentError] if no valid keys are provided.
+  /// Throws an [ArgumentError] if [limit] is not a list of two integers.
+  /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
   Future<dynamic> getBulk({
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
@@ -227,10 +253,10 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-
     if (pointersMetadata && withPointers) {
       throw ArgumentError(
-          "You select both pointers value and pointers metadata. Choose one.");
+        "You select both pointers value and pointers metadata. Choose one.",
+      );
     }
 
     if (bulkCustomKeys.isNotEmpty) {
@@ -246,7 +272,9 @@ abstract class KV {
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
-      throw ArgumentError("Limit must be a list of two integers [start, stop].");
+      throw ArgumentError(
+        "Limit must be a list of two integers [start, stop].",
+      );
     }
 
     final query = convertToBinaryQuery(
@@ -261,8 +289,12 @@ abstract class KV {
   }
 
   /// Updates multiple key-value pairs at once.
-  /// 
   /// Converts [bulkCustomKeysValues] automatically before sending.
+  /// Throws an [ArgumentError] if no valid key-value pairs are provided.
+  /// Throws an [ArgumentError] if [bulkKeysValues] is empty.
+  /// Combines [bulkKeysValues] and [bulkCustomKeysValues] into a single map.
+  /// The [bulkKeysValues] map contains key-value pairs to update.
+  /// Example: bulkKeysValues = {'key1': {'field1': 'newValue'}, 'key2': {'field2': 42}}
   Future<dynamic> updateBulk({
     Map<String, dynamic> bulkKeysValues = const {},
     Map<String, dynamic> bulkCustomKeysValues = const {},
@@ -283,6 +315,12 @@ abstract class KV {
   }
 
   /// Looks up keys matching search criteria.
+  /// Supports [limit] as `[start, stop]`.
+  /// - [schema]: Optional schema name to filter results.
+  /// - [searchCriteria]: Map of fields and values to match.
+  /// Throws an [ArgumentError] if [limit] is not a list of two integers.
+  /// Throws an [ArgumentError] if [searchCriteria] is empty.
+  /// Throws an [ArgumentError] if [schema] is not a valid string.
   Future<dynamic> lookupKeysWhere({
     List<int> limit = const [],
     String? schema,
@@ -293,7 +331,9 @@ abstract class KV {
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
-      throw ArgumentError("Limit must be a list of two integers [start, stop].");
+      throw ArgumentError(
+        "Limit must be a list of two integers [start, stop].",
+      );
     }
 
     final query = convertToBinaryQuery(
@@ -306,6 +346,14 @@ abstract class KV {
   }
 
   /// Looks up values matching search criteria.
+  /// Supports [limit] as `[start, stop]` and optional [withPointers].
+  /// - [schema]: Optional schema name to filter results.
+  /// - [searchCriteria]: Map of fields and values to match.
+  /// - [keyIncluded]: If true, includes the key in the response.
+  /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
+  /// Throws an [ArgumentError] if [limit] is not a list of two integers.
+  /// Throws an [ArgumentError] if [searchCriteria] is empty.
+  /// Throws an [ArgumentError] if [schema] is not a valid string.
   Future<dynamic> lookupValuesWhere({
     List<int> limit = const [],
     String? schema,
@@ -314,10 +362,10 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-
     if (pointersMetadata && withPointers) {
       throw ArgumentError(
-          "You select both pointers value and pointers metadata. Choose one.");
+        "You select both pointers value and pointers metadata. Choose one.",
+      );
     }
 
     command = "lookup_values";
@@ -325,7 +373,9 @@ abstract class KV {
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
-      throw ArgumentError("Limit must be a list of two integers [start, stop].");
+      throw ArgumentError(
+        "Limit must be a list of two integers [start, stop].",
+      );
     }
 
     final query = convertToBinaryQuery(
@@ -341,10 +391,9 @@ abstract class KV {
   }
 
   /// Lists all keys that depend on the given key.
-  Future<dynamic> listAllDependingKeys({
-    String? key,
-    String? customKey,
-  }) async {
+  /// Throws an [ArgumentError] if [key] is not a valid string.
+  /// Throws an [ArgumentError] if [customKey] is not a valid string.
+  Future<dynamic> listAllDependingKeys({String? key, String? customKey}) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -378,9 +427,12 @@ abstract class KV {
     final queryMap = {
       'raw': [
         'remove-keyspace',
-        'store', store,
-        'keyspace', keyspace,
-        'persistent', persistent ? 'y' : 'n',
+        'store',
+        store,
+        'keyspace',
+        keyspace,
+        'persistent',
+        persistent ? 'y' : 'n',
       ],
       'credentials': [username, password],
     };

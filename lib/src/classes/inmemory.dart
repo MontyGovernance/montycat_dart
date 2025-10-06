@@ -1,11 +1,9 @@
 import '../classes/kv.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import '../functions/generic.dart'
-    show convertCustomKey, convertToBinaryQuery;
+import '../functions/generic.dart' show convertCustomKey, convertToBinaryQuery;
 
 /// In-memory implementation of a keyspace.
-/// 
 /// Provides high-performance, non-persistent storage with optional
 /// distributed configuration. This class supports snapshots, bulk
 /// operations, and fine-grained value manipulation.
@@ -42,7 +40,6 @@ class KeyspaceInMemory extends KV {
   bool get persistent => false;
 
   /// Initiates snapshots for this keyspace.
-  /// 
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
   Future<dynamic> doSnapshotsForKeyspace() async {
@@ -53,10 +50,12 @@ class KeyspaceInMemory extends KV {
     final queryMap = {
       "raw": [
         "do-snapshots-for-keyspace",
-        "store", store,
-        "keyspace", keyspace,
+        "store",
+        store,
+        "keyspace",
+        keyspace,
       ],
-      "credentials": [username, password]
+      "credentials": [username, password],
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
@@ -64,7 +63,7 @@ class KeyspaceInMemory extends KV {
   }
 
   /// Cleans all snapshots associated with this keyspace.
-  /// 
+  ///
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
   Future<dynamic> cleanSnapshotsForKeyspace() async {
@@ -75,10 +74,12 @@ class KeyspaceInMemory extends KV {
     final queryMap = {
       "raw": [
         "clean-snapshots-for-keyspace",
-        "store", store,
-        "keyspace", keyspace,
+        "store",
+        store,
+        "keyspace",
+        keyspace,
       ],
-      "credentials": [username, password]
+      "credentials": [username, password],
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
@@ -86,7 +87,7 @@ class KeyspaceInMemory extends KV {
   }
 
   /// Stops ongoing snapshots for this keyspace.
-  /// 
+  ///
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
   Future<dynamic> stopSnapshotsForKeyspace() async {
@@ -97,10 +98,12 @@ class KeyspaceInMemory extends KV {
     final queryMap = {
       "raw": [
         "stop-snapshots-for-keyspace",
-        "store", store,
-        "keyspace", keyspace,
+        "store",
+        store,
+        "keyspace",
+        keyspace,
       ],
-      "credentials": [username, password]
+      "credentials": [username, password],
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
@@ -108,17 +111,21 @@ class KeyspaceInMemory extends KV {
   }
 
   /// Creates a new keyspace with the current configuration.
-  /// 
+  /// Throws an [ArgumentError] if [store] or [keyspace] is empty.
   Future<dynamic> createKeyspace() async {
     final queryMap = {
       "raw": [
         "create-keyspace",
-        "store", store,
-        "keyspace", keyspace,
-        "persistent", persistent ? "y" : "n",
-        "distributed", distributed ? "y" : "n"
+        "store",
+        store,
+        "keyspace",
+        keyspace,
+        "persistent",
+        persistent ? "y" : "n",
+        "distributed",
+        distributed ? "y" : "n",
       ],
-      "credentials": [username, password]
+      "credentials": [username, password],
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
@@ -126,41 +133,62 @@ class KeyspaceInMemory extends KV {
   }
 
   /// Retrieves all keys stored in this keyspace.
-  Future<dynamic> getKeys({List<String> volumes = const [], bool latestVolume = false}) async {
-
+  /// If [latestVolume] is true, only the latest volume is queried.
+  /// If [volumes] is provided, only those volumes are queried.
+  /// Throws an [ArgumentError] if both [latestVolume] and [volumes]
+  Future<dynamic> getKeys({
+    List<String> volumes = const [],
+    bool latestVolume = false,
+  }) async {
     if (latestVolume && volumes.isNotEmpty) {
       throw ArgumentError(
-          "Select either latest volume or volumes list, not both.");
+        "Select either latest volume or volumes list, not both.",
+      );
     }
 
     command = "get_keys";
-    final query = convertToBinaryQuery(cls: this, volumes: volumes, latestVolume: latestVolume);
+    final query = convertToBinaryQuery(
+      cls: this,
+      volumes: volumes,
+      latestVolume: latestVolume,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Inserts multiple values into the keyspace in a single bulk operation.
-  /// 
   /// - [bulkValues]: List of values to insert.
   /// - [expireSec]: Optional expiration time in seconds.
-  /// 
   /// Throws [ArgumentError] if [bulkValues] is empty.
-  Future<dynamic> insertBulk({required List bulkValues, int expireSec = 0}) async {
+  Future<dynamic> insertBulk({
+    required List bulkValues,
+    int expireSec = 0,
+  }) async {
     if (bulkValues.isEmpty) {
       throw ArgumentError("No values provided for bulk insertion.");
     }
 
     command = "insert_bulk";
-    final query = convertToBinaryQuery(cls: this, bulkValues: bulkValues, expireSec: expireSec);
+    final query = convertToBinaryQuery(
+      cls: this,
+      bulkValues: bulkValues,
+      expireSec: expireSec,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Updates a value in the keyspace for the given [key] or [customKey].
-  /// 
   /// - [updates] must contain the fields to update.
   /// - [expireSec] optionally sets a new expiration time.
-  /// 
   /// Throws [ArgumentError] if [updates] is empty or if no valid key is provided.
-  Future<dynamic> updateValue({String? key, String? customKey, int expireSec = 0, Map<String, dynamic>? updates}) async {
+  /// If [customKey] is provided, it will be used instead of [key].
+  /// The [updates] map contains the fields to update and their new values.
+  /// Example: updates = {'field1': 'newValue', 'field2': 42}
+  Future<dynamic> updateValue({
+    String? key,
+    String? customKey,
+    int expireSec = 0,
+    Map<String, dynamic>? updates,
+  }) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -173,32 +201,44 @@ class KeyspaceInMemory extends KV {
     }
 
     command = "update_value";
-    final query = convertToBinaryQuery(cls: this, key: key, value: updates, expireSec: expireSec);
+    final query = convertToBinaryQuery(
+      cls: this,
+      key: key,
+      value: updates,
+      expireSec: expireSec,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Inserts a single [value] into the keyspace.
-  /// 
   /// - [expireSec]: Optional expiration time in seconds.
-  /// 
   /// Throws [ArgumentError] if [value] is empty.
-  Future<dynamic> insertValue({required dynamic value, int expireSec = 0}) async {
+  Future<dynamic> insertValue({
+    required dynamic value,
+    int expireSec = 0,
+  }) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
     }
 
     command = "insert_value";
-    final query = convertToBinaryQuery(cls: this, value: value, expireSec: expireSec);
+    final query = convertToBinaryQuery(
+      cls: this,
+      value: value,
+      expireSec: expireSec,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Inserts a value under a specified [customKey].
-  /// 
   /// - [customKey] must not be empty.
   /// - [expireSec]: Optional expiration time in seconds.
-  /// 
   /// Throws [ArgumentError] if [value] or [customKey] is empty.
-  Future<dynamic> insertCustomKeyValue({required String customKey, required dynamic value, int expireSec = 0}) async {
+  Future<dynamic> insertCustomKeyValue({
+    required String customKey,
+    required dynamic value,
+    int expireSec = 0,
+  }) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
     }
@@ -208,24 +248,34 @@ class KeyspaceInMemory extends KV {
 
     final customKeyConverted = convertCustomKey(customKey);
     command = "insert_custom_key_value";
-    final query = convertToBinaryQuery(cls: this, key: customKeyConverted, value: value, expireSec: expireSec);
+    final query = convertToBinaryQuery(
+      cls: this,
+      key: customKeyConverted,
+      value: value,
+      expireSec: expireSec,
+    );
     return await runQuery(host, port, query);
   }
 
   /// Inserts an empty entry under a specified [customKey].
-  /// 
   /// - [customKey] must not be empty.
   /// - [expireSec]: Optional expiration time in seconds.
-  /// 
   /// Throws [ArgumentError] if [customKey] is empty.
-  Future<dynamic> insertCustomKey({required String customKey, int expireSec = 0}) async {
+  Future<dynamic> insertCustomKey({
+    required String customKey,
+    int expireSec = 0,
+  }) async {
     if (customKey.isEmpty) {
       throw ArgumentError("No custom key provided for insertion.");
     }
 
     final customKeyConverted = convertCustomKey(customKey);
     command = "insert_custom_key";
-    final query = convertToBinaryQuery(cls: this, key: customKeyConverted, expireSec: expireSec);
+    final query = convertToBinaryQuery(
+      cls: this,
+      key: customKeyConverted,
+      expireSec: expireSec,
+    );
     return await runQuery(host, port, query);
   }
 }
