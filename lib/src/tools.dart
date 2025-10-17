@@ -15,10 +15,10 @@ enum Permission {
 /// Supports single timestamps, ranges, or before/after conditions.
 class Timestamp {
   final String? timestamp; // Single timestamp
-  final String? start;     // Range start
-  final String? end;       // Range end
-  final String? after;     // After condition
-  final String? before;    // Before condition
+  final String? start; // Range start
+  final String? end; // Range end
+  final String? after; // After condition
+  final String? before; // Before condition
 
   const Timestamp({
     this.timestamp,
@@ -31,7 +31,9 @@ class Timestamp {
   /// Serializes the timestamp into a map or string for Montycat queries.
   dynamic serialize() {
     if (start != null && end != null) {
-      return {"range_timestamp": [start, end]};
+      return {
+        "range_timestamp": [start, end],
+      };
     } else if (after != null) {
       return {"after_timestamp": after};
     } else if (before != null) {

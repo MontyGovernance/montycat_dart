@@ -29,6 +29,9 @@ abstract class KV {
   /// Server port number.
   int port = 0;
 
+  /// Whether to use TLS for the connection.
+  bool useTls = false;
+
   /// Serialized representation of query limits (`start`, `stop`).
   Map<String, int> limitOutput = {};
 
@@ -56,8 +59,15 @@ abstract class KV {
     int port,
     Uint8List query, {
     void Function(dynamic)? callback,
+    bool useTls = false,
   }) async {
-    return await sendData(host, port, query, callback: callback);
+    return await sendData(
+      host,
+      port,
+      query,
+      callback: callback,
+      useTls: useTls,
+    );
   }
 
   /// Connects to the database engine using an [Engine] object.
@@ -67,6 +77,7 @@ abstract class KV {
     username = engine.username;
     password = engine.password;
     store = engine.store;
+    useTls = engine.useTls;
   }
 
   /// Enforces a schema for the current keyspace.
@@ -129,7 +140,7 @@ abstract class KV {
     };
 
     final queryBytes = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, queryBytes);
+    return await runQuery(host, port, queryBytes, useTls: useTls);
   }
 
   /// Removes a previously enforced schema from the keyspace.
@@ -151,7 +162,7 @@ abstract class KV {
     };
 
     final queryBytes = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, queryBytes);
+    return await runQuery(host, port, queryBytes, useTls: useTls);
   }
 
   /// Retrieves a single value by [key] or [customKey].
@@ -191,7 +202,7 @@ abstract class KV {
       pointersMetadata: pointersMetadata,
     );
 
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Deletes a single key from the store.
@@ -213,7 +224,7 @@ abstract class KV {
 
     Uint8List query = convertToBinaryQuery(cls: this, key: key);
 
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Deletes multiple keys in one query.
@@ -235,7 +246,7 @@ abstract class KV {
 
     final query = convertToBinaryQuery(cls: this, bulkKeys: bulkKeys);
 
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Fetches multiple values at once.
@@ -285,7 +296,7 @@ abstract class KV {
       pointersMetadata: pointersMetadata,
     );
 
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Updates multiple key-value pairs at once.
@@ -311,7 +322,7 @@ abstract class KV {
     }
     command = "update_bulk";
     final query = convertToBinaryQuery(cls: this, bulkKeysValues: finalMap);
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Looks up keys matching search criteria.
@@ -342,7 +353,7 @@ abstract class KV {
       schema: schema,
     );
 
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Looks up values matching search criteria.
@@ -387,7 +398,7 @@ abstract class KV {
       pointersMetadata: pointersMetadata,
     );
 
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Lists all keys that depend on the given key.
@@ -404,22 +415,22 @@ abstract class KV {
 
     command = "list_all_depending_keys";
 
-    final query = convertToBinaryQuery(key: key);
-    return await runQuery(host, port, query);
+    final query = convertToBinaryQuery(key: key, cls: this);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Returns the number of keys in the current keyspace.
   Future<dynamic> getLen() async {
     command = "get_len";
     final query = convertToBinaryQuery(cls: this);
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Returns all enforced schemas in the keyspace.
   Future<dynamic> listAllSchemasInKeyspace() async {
     command = "list_all_schemas_in_keyspace";
     final query = convertToBinaryQuery(cls: this);
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Removes the entire keyspace from the store.
@@ -438,7 +449,7 @@ abstract class KV {
     };
 
     final queryBytes = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, queryBytes);
+    return await runQuery(host, port, queryBytes, useTls: useTls);
   }
 
   /// Prints the current connection and keyspace properties.

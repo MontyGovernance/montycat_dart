@@ -25,6 +25,7 @@ class Engine {
     required this.username,
     required this.password,
     this.store,
+    this.useTls = false,
   });
 
   final String host;
@@ -32,6 +33,7 @@ class Engine {
   final String username;
   final String password;
   late String? store;
+  late bool useTls;
 
   /// Creates an `Engine` instance from a URI string.
   ///
@@ -72,6 +74,7 @@ class Engine {
       username: username,
       password: password,
       store: store,
+      useTls: false,
     );
   }
 
@@ -83,7 +86,7 @@ class Engine {
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
-    return await sendData(host, port, queryBytes);
+    return await sendData(host, port, queryBytes, useTls: useTls);
   }
 
   /// Creates a new store on the Montycat server.
@@ -134,6 +137,7 @@ class Engine {
     Permission permission, {
     List<String>? keyspaces,
   }) async {
+
     if (store == null) throw ArgumentError("Store must be specified");
 
     final List<String> command = [
@@ -177,6 +181,7 @@ class Engine {
 
   /// Retrieves the system structure available on the server.
   Future<dynamic> getStructureAvailable() async {
-    return await _executeQuery(["get-structure-available"]);
+    final storePart = store != null ? ["store", store!] : [];
+    return await _executeQuery(["get-structure-available", ...storePart]);
   }
 }

@@ -59,7 +59,7 @@ class KeyspaceInMemory extends KV {
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Cleans all snapshots associated with this keyspace.
@@ -83,7 +83,7 @@ class KeyspaceInMemory extends KV {
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Stops ongoing snapshots for this keyspace.
@@ -107,7 +107,7 @@ class KeyspaceInMemory extends KV {
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Creates a new keyspace with the current configuration.
@@ -129,7 +129,7 @@ class KeyspaceInMemory extends KV {
     };
 
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Retrieves all keys stored in this keyspace.
@@ -152,7 +152,7 @@ class KeyspaceInMemory extends KV {
       volumes: volumes,
       latestVolume: latestVolume,
     );
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Inserts multiple values into the keyspace in a single bulk operation.
@@ -173,7 +173,7 @@ class KeyspaceInMemory extends KV {
       bulkValues: bulkValues,
       expireSec: expireSec,
     );
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Updates a value in the keyspace for the given [key] or [customKey].
@@ -207,7 +207,7 @@ class KeyspaceInMemory extends KV {
       value: updates,
       expireSec: expireSec,
     );
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Inserts a single [value] into the keyspace.
@@ -227,7 +227,7 @@ class KeyspaceInMemory extends KV {
       value: value,
       expireSec: expireSec,
     );
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Inserts a value under a specified [customKey].
@@ -254,7 +254,7 @@ class KeyspaceInMemory extends KV {
       value: value,
       expireSec: expireSec,
     );
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 
   /// Inserts an empty entry under a specified [customKey].
@@ -276,6 +276,6 @@ class KeyspaceInMemory extends KV {
       key: customKeyConverted,
       expireSec: expireSec,
     );
-    return await runQuery(host, port, query);
+    return await runQuery(host, port, query, useTls: useTls);
   }
 }

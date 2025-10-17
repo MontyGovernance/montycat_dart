@@ -50,7 +50,8 @@ Map<String, dynamic> modifyPointers(Map<String, dynamic> value) {
         final rawKey = v[1];
         String processedKey;
 
-        if (rawKey is int || (rawKey is String && RegExp(r'^\d+$').hasMatch(rawKey))) {
+        if (rawKey is int ||
+            (rawKey is String && RegExp(r'^\d+$').hasMatch(rawKey))) {
           processedKey = rawKey.toString();
         } else {
           processedKey = convertCustomKey(rawKey);
@@ -105,10 +106,11 @@ Uint8List convertToBinaryQuery({
       throw Exception('Bulk values should fit only one schema');
     }
     schema = schemas.first;
-    bulkValues = bulkValues.map((item) {
-    final filtered = Map<String, dynamic>.from(item)..remove('schema');
-      return modifyPointers(filtered);
-    }).toList();
+    bulkValues =
+        bulkValues.map((item) {
+          final filtered = Map<String, dynamic>.from(item)..remove('schema');
+          return modifyPointers(filtered);
+        }).toList();
   }
 
   // Process bulk key-values

@@ -1,10 +1,10 @@
 name: montycat
 description: >
-  Montycat Dart client: High-performance, NoSQL database client for Dart and Flutter.
+  MontyCat Dart client: High-performance NoSQL database client for Dart and Flutter.
   Supports asynchronous operations, real-time subscriptions, in-memory and persistent storage, and robust data governance.
 version: 1.0.1
 environment:
-  sdk: ^3.7.2
+  sdk: ">=3.7.2 <4.0.0"
 
 dependencies:
   hashlib: ^2.2.0
@@ -13,11 +13,16 @@ dev_dependencies:
   lints: ^5.0.0
   test: ^1.24.0
 
-license: MIT
-
 topics:
   - database
   - nosql
   - data-mesh
   - cache
   - realtime
+
+license: MIT
+# repository: https://github.com/yourusername/montycat
+# homepage: https://montycat.dev
+# issue_tracker: https://github.com/yourusername/montycat/issues
+# documentation: https://pub.dev/documentation/montycat
+publish_to: "https://pub.dev" # Remove or set to "https://pub.dev" when ready to publish

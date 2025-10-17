@@ -41,23 +41,39 @@ Future<dynamic> sendData(
   int port,
   Uint8List query, {
   void Function(dynamic)? callback,
+  bool useTls = false,
 }) async {
   try {
-    var socket = await Socket.connect(host, port, timeout: Duration(seconds: 10));
+    late Socket socket;
+
+    if (useTls) {
+      socket = await SecureSocket.connect(
+        host,
+        port,
+        onBadCertificate: (X509Certificate cert) => true, // Accept self-signed
+      ).timeout(const Duration(seconds: 10));
+    } else {
+      socket = await Socket.connect(
+        host,
+        port,
+        timeout: const Duration(seconds: 10),
+      );
+    }
+
     var queryStr = utf8.decode(query, allowMalformed: true);
     bool isSubscribe = queryStr.contains("subscribe");
 
     socket.add([...query, 10]);
     await socket.flush();
 
-    var lines = socket
-        .cast<List<int>>()
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .asBroadcastStream();
+    var lines =
+        socket
+            .cast<List<int>>()
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .asBroadcastStream();
 
     if (isSubscribe) {
-
       final handle = SubscriptionHandle(socket);
 
       lines.listen((line) {
@@ -66,7 +82,6 @@ Future<dynamic> sendData(
             var parsed = recursiveParseJson(line.trim());
             callback(parsed);
           } catch (e) {
-            print("Error occurred: $e");
             callback("Failed to parse: $line");
           }
         }
@@ -74,7 +89,7 @@ Future<dynamic> sendData(
 
       return handle;
     } else {
-      var line = await lines.first.timeout(Duration(seconds: 120));
+      var line = await lines.first.timeout(const Duration(seconds: 120));
       await socket.close();
       return recursiveParseJson(line.trim());
     }
@@ -86,7 +101,6 @@ Future<dynamic> sendData(
     return "Error: $e";
   }
 }
-
 
 /// Recursively parses nested JSON strings in the provided data.
 ///
