@@ -106,7 +106,7 @@ Future<void> main() async {
 
   print("Keyspaces created: $customersCreated, $productionCreated");
 
-  // rn queries
+  // run queries
 
   var customer = Customer({
     'name': 'Alice Smith',
