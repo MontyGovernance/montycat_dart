@@ -10,6 +10,7 @@ import '../functions/generic.dart'
 /// Abstract base class for interacting with the MontyCat database.
 /// Provides methods for connection handling, schema enforcement,
 /// and CRUD-like operations (single, bulk, lookup).
+///
 abstract class KV {
   /// The last executed command (e.g. "get_value", "update_bulk").
   String command = "";
@@ -71,6 +72,26 @@ abstract class KV {
   }
 
   /// Connects to the database engine using an [Engine] object.
+  /// Copies connection parameters from the [Engine].
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final engine = Engine(
+  ///   host: 'localhost',
+  ///   port: 1234,
+  ///   username: 'admin',
+  ///   password: 'secret',
+  ///   store: 'mystore',
+  /// );
+  /// ```
+  ///
+  /// Then connect the keyspace:
+  ///
+  /// ```dart
+  /// await keyspace.connectEngine(engine);
+  /// ```
+  ///
   void connectEngine(Engine engine) {
     host = engine.host;
     port = engine.port;
@@ -84,6 +105,32 @@ abstract class KV {
   ///
   /// Converts Dart [Type]s to database-supported types and sends an
   /// 'enforce-schema' query.
+  ///
+  /// Throws an [ArgumentError] if [schema] is empty.
+  ///
+  /// Example:
+  ///
+  ///
+  ///```dart
+  ///
+  ///class Orders extends Schema {
+  ///   Orders(super.kwargs);
+  ///   static String get schemaName => 'Orders';
+  ///   static Map<String, Type> get schemaMetadata => {
+  ///     'date': Timestamp,
+  ///     'quantity': int,
+  ///     'customer': String,
+  ///   };
+  ///   @override
+  ///   Map<String, Type> metadata() => schemaMetadata;
+  /// }
+  ///
+  /// await keyspace.enforceSchema(
+  /// schema: Orders.schemaMetadata,
+  /// schemaName: Orders.schemaName,
+  /// );
+  ///```
+  ///
   Future<dynamic> enforceSchema({
     required Map<String, Type> schema,
     required String schemaName,
@@ -145,6 +192,13 @@ abstract class KV {
 
   /// Removes a previously enforced schema from the keyspace.
   /// Throws an [ArgumentError] if [schema] is empty.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// await keyspace.removeEnforcedSchema('Orders');
+  /// ```
+  ///
   Future<dynamic> removeEnforcedSchema(String schema) async {
     final queryMap = {
       'raw': [
@@ -171,6 +225,16 @@ abstract class KV {
   /// - [keyIncluded]: If true, includes the key in the response.
   /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
   /// Throws an [ArgumentError] if no valid key is provided.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// final result = await keyspace.getValue(
+  ///   key: 'some_key',
+  ///   keyIncluded: true,
+  /// );
+  /// ```
+  ///
   Future<dynamic> getValue({
     String? key,
     String? customKey,
@@ -207,6 +271,13 @@ abstract class KV {
 
   /// Deletes a single key from the store.
   /// Throws an [ArgumentError] if no valid key is provided.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// await keyspace.deleteKey(key: 'some_key');
+  /// ```
+  ///
   Future<dynamic> deleteKey({String? key, String? customKey}) async {
     if (key != null && customKey != null) {
       throw ArgumentError("Provide either 'key' or 'customKey', not both.");
@@ -230,6 +301,14 @@ abstract class KV {
   /// Deletes multiple keys in one query.
   /// Throws an [ArgumentError] if no valid keys are provided.
   /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final keysToDelete = ['key1', 'key2'];
+  /// await keyspace.deleteBulk(bulkKeys: keysToDelete);
+  /// ```
+  ///
   Future<dynamic> deleteBulk({
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
@@ -256,6 +335,14 @@ abstract class KV {
   /// Throws an [ArgumentError] if no valid keys are provided.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
+  /// 
+  /// Example:
+  ///
+  /// ```dart
+  /// final keysToFetch = ['key1', 'key2'];
+  /// final result = await keyspace.getBulk(bulkKeys: keysToFetch);
+  /// ```
+  ///
   Future<dynamic> getBulk({
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
@@ -305,7 +392,19 @@ abstract class KV {
   /// Throws an [ArgumentError] if [bulkKeysValues] is empty.
   /// Combines [bulkKeysValues] and [bulkCustomKeysValues] into a single map.
   /// The [bulkKeysValues] map contains key-value pairs to update.
-  /// Example: bulkKeysValues = {'key1': {'field1': 'newValue'}, 'key2': {'field2': 42}}
+  /// For example: bulkKeysValues = {'key1': {'field1': 'newValue'}, 'key2': {'field2': 42}}
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final updates = {
+  /// 'key1': {'field1': 'newValue'},
+  /// 'key2': {'field2': 42},
+  /// };
+  ///
+  /// await keyspace.updateBulk(bulkKeysValues: updates);
+  /// ```
+  ///
   Future<dynamic> updateBulk({
     Map<String, dynamic> bulkKeysValues = const {},
     Map<String, dynamic> bulkCustomKeysValues = const {},
@@ -332,6 +431,16 @@ abstract class KV {
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Throws an [ArgumentError] if [searchCriteria] is empty.
   /// Throws an [ArgumentError] if [schema] is not a valid string.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final result = await keyspace.lookupKeysWhere(
+  ///   schema: Orders.schemaName,
+  ///  searchCriteria: {'customer': 'Alice Smith'},
+  /// );
+  /// ```
+  ///
   Future<dynamic> lookupKeysWhere({
     List<int> limit = const [],
     String? schema,
@@ -365,6 +474,16 @@ abstract class KV {
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Throws an [ArgumentError] if [searchCriteria] is empty.
   /// Throws an [ArgumentError] if [schema] is not a valid string.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final result = await keyspace.lookupValuesWhere(
+  /// schema: Orders.schemaName,
+  /// searchCriteria: {'customer': 'Alice Smith'},
+  /// );
+  /// ```
+  ///
   Future<dynamic> lookupValuesWhere({
     List<int> limit = const [],
     String? schema,
@@ -404,6 +523,13 @@ abstract class KV {
   /// Lists all keys that depend on the given key.
   /// Throws an [ArgumentError] if [key] is not a valid string.
   /// Throws an [ArgumentError] if [customKey] is not a valid string.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final result = await keyspace.listAllDependingKeys(key: 'my_key');
+  /// ```
+  ///
   Future<dynamic> listAllDependingKeys({String? key, String? customKey}) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
@@ -420,6 +546,13 @@ abstract class KV {
   }
 
   /// Returns the number of keys in the current keyspace.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final length = await keyspace.getLen();
+  /// ```
+  ///
   Future<dynamic> getLen() async {
     command = "get_len";
     final query = convertToBinaryQuery(cls: this);
@@ -427,6 +560,12 @@ abstract class KV {
   }
 
   /// Returns all enforced schemas in the keyspace.
+  ///
+  /// Example:
+  ///  ```dart
+  /// final schemas = await keyspace.listAllSchemasInKeyspace();
+  /// ```
+  ///
   Future<dynamic> listAllSchemasInKeyspace() async {
     command = "list_all_schemas_in_keyspace";
     final query = convertToBinaryQuery(cls: this);
@@ -434,6 +573,13 @@ abstract class KV {
   }
 
   /// Removes the entire keyspace from the store.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.removeKeyspace();
+  /// ```
+  ///
   Future<dynamic> removeKeyspace() async {
     final queryMap = {
       'raw': [
@@ -453,7 +599,14 @@ abstract class KV {
   }
 
   /// Prints the current connection and keyspace properties.
-  showProperties() async {
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// keyspace.showProperties();
+  /// ```
+  ///
+  showProperties() {
     var map = <String, dynamic>{
       'host': host,
       'port': port,

@@ -9,6 +9,16 @@ import '../functions/generic.dart' show convertCustomKey, convertToBinaryQuery;
 /// A persistent keyspace stores data on disk (not just in memory).
 /// Supports features like cache and compression settings, along with
 /// CRUD operations on keys and values.
+///
+/// Example:
+///
+/// ```dart
+/// final keyspace = KeyspacePersistent(keyspace: 'my_persistent_keyspace');
+/// keyspace.cache = 1024; // Set cache size
+/// keyspace.compression = true; // Enable compression
+/// await keyspace.createKeyspace(); // Create the keyspace on the server
+/// ```
+///
 class KeyspacePersistent extends KV {
   String _keyspace;
   bool _distributed = false;
@@ -59,6 +69,16 @@ class KeyspacePersistent extends KV {
   /// Note: Each subscription increments the port by 1.
   /// Make sure to manage ports accordingly.
   ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.subscribe(
+  /// key: 'my_key',
+  /// callback: (data) {
+  ///  print('Received update: $data');
+  /// });
+  /// ```
+  ///
   Future<dynamic> subscribe({
     String? key,
     String? customKey,
@@ -92,6 +112,13 @@ class KeyspacePersistent extends KV {
 
   /// Insert a custom key into the keyspace.
   /// Throws an [ArgumentError] if [customKey] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.insertCustomKey(customKey: 'my_custom_key');
+  /// ```
+  ///
   Future<dynamic> insertCustomKey({required String customKey}) async {
     if (customKey.isEmpty) {
       throw ArgumentError("No custom key provided for insertion.");
@@ -106,6 +133,13 @@ class KeyspacePersistent extends KV {
 
   /// Insert a custom key-value pair into the keyspace.
   /// Throws an [ArgumentError] if [customKey] or [value] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.insertCustomKeyValue(customKey: 'my_custom_key', value: 'my_value');
+  /// ```
+  ///
   Future<dynamic> insertCustomKeyValue({
     required String customKey,
     required dynamic value,
@@ -130,6 +164,13 @@ class KeyspacePersistent extends KV {
 
   /// Insert a value (auto-generated key will be used).
   /// Throws an [ArgumentError] if [value] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.insertValue(value: 'my_value');
+  /// ```
+  ///
   Future<dynamic> insertValue({required dynamic value}) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
@@ -145,7 +186,16 @@ class KeyspacePersistent extends KV {
   /// Throws an [ArgumentError] if no filters or key are provided.
   /// If [customKey] is provided, it will be used instead of [key].
   /// The [filters] map contains the fields to update and their new values.
-  /// Example: filters = {'field1': 'newValue', 'field2': 42}
+  /// For example: filters = {'field1': 'newValue', 'field2': 42}
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.updateValue(
+  /// key: 'my_key',
+  /// updates: {'field1': 'newValue', 'field2': 42},
+  /// ```
+  ///
   Future<dynamic> updateValue({
     String? key,
     String? customKey,
@@ -173,6 +223,16 @@ class KeyspacePersistent extends KV {
   /// If [volumes] is provided, only those volumes are queried.
   /// Throws an [ArgumentError] if both [latestVolume] and [volumes] are set.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final keys = await keyspace.getKeys(
+  ///   limit: [0, 10],
+  ///   latestVolume: true,
+  /// );
+  /// ```
+  ///
   Future<dynamic> getKeys({
     List<int> limit = const [],
     List<String> volumes = const [],
@@ -205,6 +265,15 @@ class KeyspacePersistent extends KV {
 
   /// Insert multiple values at once.
   /// Throws an [ArgumentError] if [bulkValues] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final result = await keyspace.insertBulk(
+  ///   bulkValues: ['value1', 'value2', 'value3'],
+  /// );
+  /// ```
+  ///
   Future<dynamic> insertBulk({required List bulkValues}) async {
     if (bulkValues.isEmpty) {
       throw ArgumentError("No values provided for bulk insertion.");
@@ -217,6 +286,13 @@ class KeyspacePersistent extends KV {
 
   /// Creates a new keyspace with the current configuration.
   /// Throws an [ArgumentError] if [store] or [keyspace] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.createKeyspace();
+  /// ```
+  ///
   Future<dynamic> createKeyspace() async {
     final queryMap = {
       "raw": [
@@ -243,6 +319,13 @@ class KeyspacePersistent extends KV {
 
   /// Update cache and compression settings for this keyspace.
   /// Throws an [ArgumentError] if [cache] or [compression] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.updateCacheAndCompression();
+  /// ```
+  ///
   Future<dynamic> updateCacheAndCompression() async {
     if (!persistent) {
       throw Exception(
@@ -268,4 +351,5 @@ class KeyspacePersistent extends KV {
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
     return await runQuery(host, port, query, useTls: useTls);
   }
+
 }

@@ -18,6 +18,28 @@ import 'tools.dart' show Permission;
 /// - `username`: Authentication username
 /// - `password`: Authentication password
 /// - `store`: Optional store name to operate on
+/// - `useTls`: Whether to use TLS for the connection (default is false)
+///
+/// Example:
+///
+/// ```dart
+/// final engine = Engine(
+///   host: 'localhost',
+///   port: 1234,
+///   username: 'admin',
+///   password: 'secret',
+///   store: 'mystore',
+/// );
+/// ```
+///
+/// Or using a URI:
+///
+/// ```dart
+/// final engine = Engine.fromUri('montycat://admin:secret@localhost:1234/mystore');
+/// ```
+///
+/// This class handles communication with the Montycat server and executes commands as needed.
+///
 class Engine {
   Engine({
     required this.host,
@@ -38,13 +60,18 @@ class Engine {
   /// Creates an `Engine` instance from a URI string.
   ///
   /// Expected URI format:
+  ///
   /// `montycat://username:password@host:port[/store]`
+  ///
   /// - `username`: Authentication username
   /// - `password`: Authentication password
   /// - `host`: Montycat server hostname
   /// - `port`: Port number of the Montycat server
   /// - `store`: Optional store name to operate on
+  /// - `useTls`: Whether to use TLS for the connection (default is false)
+  ///
   /// Throws a [FormatException] if the URI is invalid or missing required components.
+  ///
   factory Engine.fromUri(String uri) {
     final parsed = Uri.parse(uri);
 
@@ -79,6 +106,7 @@ class Engine {
   }
 
   /// Internal helper to execute any Montycat command.
+  ///
   Future<dynamic> _executeQuery(List<dynamic> command) async {
     Map<String, dynamic> query = {
       "raw": command,
@@ -91,6 +119,7 @@ class Engine {
 
   /// Creates a new store on the Montycat server.
   /// Throws an [ArgumentError] if the store name is not specified.
+  ///
   Future<dynamic> createStore() async {
     if (store == null) throw ArgumentError("Store name must be specified");
     return await _executeQuery(["create-store", "store", store]);
@@ -98,6 +127,7 @@ class Engine {
 
   /// Removes an existing store from the Montycat server.
   /// Throws an [ArgumentError] if the store name is not specified.
+  ///
   Future<dynamic> removeStore() async {
     if (store == null) throw ArgumentError("Store name must be specified");
     return await _executeQuery(["remove-store", "store", store]);
@@ -105,6 +135,7 @@ class Engine {
 
   /// Grants a permission to an owner.
   /// Optional `keyspaces` can be specified to limit scope.
+  ///
   Future<dynamic> grantTo(
     String owner,
     Permission permission, {
@@ -132,6 +163,7 @@ class Engine {
 
   /// Revokes a permission from an owner.
   /// Optional `keyspaces` can be specified to limit scope.
+  ///
   Future<dynamic> revokeFrom(
     String owner,
     Permission permission, {
@@ -159,6 +191,7 @@ class Engine {
   }
 
   /// Creates a new owner with the given username and password.
+  ///
   Future<dynamic> createOwner(String owner, String password) async {
     return await _executeQuery([
       "create-owner",
@@ -170,16 +203,19 @@ class Engine {
   }
 
   /// Removes an existing owner.
+  ///
   Future<dynamic> removeOwner(String owner) async {
     return await _executeQuery(["remove-owner", "username", owner]);
   }
 
   /// Lists all existing owners in the system.
+  ///
   Future<dynamic> listOwners() async {
     return await _executeQuery(["list-owners"]);
   }
 
   /// Retrieves the system structure available on the server.
+  ///
   Future<dynamic> getStructureAvailable() async {
     final storePart = store != null ? ["store", store!] : [];
     return await _executeQuery(["get-structure-available", ...storePart]);

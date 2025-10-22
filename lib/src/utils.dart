@@ -7,12 +7,16 @@ import 'dart:typed_data';
 /// Allows stopping the subscription and closing the socket.
 /// When stopped, no further callbacks will be invoked.
 /// Used in subscribe queries.
+///
 class SubscriptionHandle {
   final Socket _socket;
   bool _stopped = false;
 
   SubscriptionHandle(this._socket);
 
+  /// Stops the subscription and closes the socket connection.
+  /// After calling this, no further callbacks will be invoked.
+  ///
   void stop() {
     _stopped = true;
     _socket.destroy();
@@ -36,6 +40,7 @@ class SubscriptionHandle {
 /// Throws:
 ///   - [TimeoutException]: If the operation exceeds the 120-second timeout.
 ///   - [SocketException]: If the server refuses the connection or resets it.
+///
 Future<dynamic> sendData(
   String host,
   int port,
@@ -113,6 +118,7 @@ Future<dynamic> sendData(
 ///
 /// Returns:
 ///   A fully parsed Dart object with all nested JSON strings converted, except for u128 values.
+///
 dynamic recursiveParseJson(dynamic data) {
   if (data is String) {
     if (isU128(data)) {
@@ -140,6 +146,7 @@ dynamic recursiveParseJson(dynamic data) {
 ///
 /// Returns:
 ///   True if the string is a u128 value, false otherwise.
+///
 bool isU128(String value) {
   return value.length > 16 && RegExp(r'^\d+$').hasMatch(value);
 }

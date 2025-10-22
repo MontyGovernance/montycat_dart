@@ -7,6 +7,14 @@ import '../functions/generic.dart' show convertCustomKey, convertToBinaryQuery;
 /// Provides high-performance, non-persistent storage with optional
 /// distributed configuration. This class supports snapshots, bulk
 /// operations, and fine-grained value manipulation.
+/// Extends the base [KV] class to implement in-memory specific behavior.
+///
+/// Example:
+/// 
+/// ```dart
+/// final keyspace = KeyspaceInMemory(keyspace: 'my_in_memory_space');
+/// ```
+///
 class KeyspaceInMemory extends KV {
   String _keyspace;
   bool _distributed = false;
@@ -42,6 +50,13 @@ class KeyspaceInMemory extends KV {
   /// Initiates snapshots for this keyspace.
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.doSnapshotsForKeyspace();
+  /// ```
+  ///
   Future<dynamic> doSnapshotsForKeyspace() async {
     if (persistent) {
       throw Exception("Snapshots can only be taken for in-memory keyspaces");
@@ -66,6 +81,13 @@ class KeyspaceInMemory extends KV {
   ///
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// await keyspace.cleanSnapshotsForKeyspace();
+  /// ```
+  ///
   Future<dynamic> cleanSnapshotsForKeyspace() async {
     if (persistent) {
       throw Exception("Snapshots can only be taken for in-memory keyspaces");
@@ -90,6 +112,13 @@ class KeyspaceInMemory extends KV {
   ///
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// await keyspace.stopSnapshotsForKeyspace();
+  /// ```
+  ///
   Future<dynamic> stopSnapshotsForKeyspace() async {
     if (persistent) {
       throw Exception("Snapshots can only be taken for in-memory keyspaces");
@@ -112,6 +141,13 @@ class KeyspaceInMemory extends KV {
 
   /// Creates a new keyspace with the current configuration.
   /// Throws an [ArgumentError] if [store] or [keyspace] is empty.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// await keyspace.createKeyspace();
+  /// ```
+  ///
   Future<dynamic> createKeyspace() async {
     final queryMap = {
       "raw": [
@@ -135,7 +171,14 @@ class KeyspaceInMemory extends KV {
   /// Retrieves all keys stored in this keyspace.
   /// If [latestVolume] is true, only the latest volume is queried.
   /// If [volumes] is provided, only those volumes are queried.
-  /// Throws an [ArgumentError] if both [latestVolume] and [volumes]
+  /// Throws an [ArgumentError] if both [latestVolume] and [volumes] are specified.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// final keys = await keyspace.getKeys(latestVolume: true);
+  /// ```
+  ///
   Future<dynamic> getKeys({
     List<String> volumes = const [],
     bool latestVolume = false,
@@ -159,6 +202,14 @@ class KeyspaceInMemory extends KV {
   /// - [bulkValues]: List of values to insert.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [bulkValues] is empty.
+  /// 
+  /// Example:
+  ///
+  /// ```dart
+  /// final values = [{'field1': 'value1'}, {'field2': 'value2'}];
+  /// await keyspace.insertBulk(bulkValues: values);
+  /// ```
+  ///
   Future<dynamic> insertBulk({
     required List bulkValues,
     int expireSec = 0,
@@ -182,7 +233,16 @@ class KeyspaceInMemory extends KV {
   /// Throws [ArgumentError] if [updates] is empty or if no valid key is provided.
   /// If [customKey] is provided, it will be used instead of [key].
   /// The [updates] map contains the fields to update and their new values.
-  /// Example: updates = {'field1': 'newValue', 'field2': 42}
+  /// For example: updates = {'field1': 'newValue', 'field2': 42}
+  /// 
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.updateValue(
+  /// key: 'existing_key',
+  /// updates: {'field1': 'newValue'},
+  /// ```
+  ///
   Future<dynamic> updateValue({
     String? key,
     String? customKey,
@@ -213,6 +273,13 @@ class KeyspaceInMemory extends KV {
   /// Inserts a single [value] into the keyspace.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [value] is empty.
+  /// 
+  /// Example:
+  /// 
+  /// ```dart
+  /// await keyspace.insertValue(value: {'field1': 'value1'});
+  /// ```
+  ///
   Future<dynamic> insertValue({
     required dynamic value,
     int expireSec = 0,
@@ -234,6 +301,16 @@ class KeyspaceInMemory extends KV {
   /// - [customKey] must not be empty.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [value] or [customKey] is empty.
+  /// 
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.insertCustomKeyValue(
+  /// customKey: 'my_custom_key',
+  /// value: {'field1': 'value1'},
+  /// );
+  /// ```
+  ///
   Future<dynamic> insertCustomKeyValue({
     required String customKey,
     required dynamic value,
@@ -261,6 +338,13 @@ class KeyspaceInMemory extends KV {
   /// - [customKey] must not be empty.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [customKey] is empty.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.insertCustomKey(customKey: 'my_empty_key');
+  /// ```
+  ///
   Future<dynamic> insertCustomKey({
     required String customKey,
     int expireSec = 0,

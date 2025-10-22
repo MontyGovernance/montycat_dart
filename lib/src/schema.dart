@@ -3,26 +3,27 @@ import 'tools.dart';
 /// Base abstract class for defining Montycat schemas.
 ///
 /// Handles:
+///
 /// - Field initialization
 /// - Field type validation
 /// - Pointer and Timestamp serialization
 /// - Extra and missing field checks
+///
 abstract class Schema {
   final Map<String, dynamic> _fields = {};
   late final String schema;
 
   /// Constructor accepts a map of field values.
   /// Performs type validation and prepares pointers/timestamps.
+  ///
   Schema(Map<String, dynamic> kwargs) {
     final hints = metadata();
     schema = runtimeType.toString();
 
-    // Assign provided values
     kwargs.forEach((key, value) {
       _fields[key] = value;
     });
 
-    // Ensure all declared fields exist
     for (final entry in hints.entries) {
       if (!_fields.containsKey(entry.key)) {
         _fields[entry.key] = null;
@@ -35,12 +36,15 @@ abstract class Schema {
   }
 
   /// Subclasses must override this method to define expected field types.
+  ///
   Map<String, dynamic> metadata();
 
   /// Returns a serializable map of field values
+  ///
   Map<String, dynamic> serialize() => Map<String, dynamic>.from(_fields);
 
   /// Checks that no required fields are missing
+  ///
   void checkMissingFields(Map<String, dynamic> hints) {
     for (final entry in hints.entries) {
       final key = entry.key;
@@ -51,6 +55,7 @@ abstract class Schema {
   }
 
   /// Checks for any fields not defined in metadata
+  ///
   void checkExtraFields(Map<String, dynamic> hints) {
     final defined = hints.keys.toSet();
     for (final key in _fields.keys) {
@@ -60,7 +65,8 @@ abstract class Schema {
     }
   }
 
-  /// Validates field types and serializes Pointers and Timestamps
+  /// Validates field types and serializes Pointers and Timestamps accordingly.
+  ///
   void validateTypes(Map<String, dynamic> hints) {
     final Map<String, dynamic> pointers = {};
     final Map<String, dynamic> timestamps = {};
@@ -68,7 +74,6 @@ abstract class Schema {
     hints.forEach((attribute, expectedType) {
       final actualValue = _fields[attribute];
 
-      // Handle Pointer
       if (expectedType == Pointer) {
         if (actualValue is! Pointer && actualValue != null) {
           throw ArgumentError(
@@ -80,7 +85,7 @@ abstract class Schema {
           _fields.remove(attribute);
         }
       }
-      // Handle Timestamp
+
       else if (expectedType == Timestamp) {
         if (actualValue is! Timestamp && actualValue != null) {
           throw ArgumentError(
@@ -92,7 +97,7 @@ abstract class Schema {
           _fields.remove(attribute);
         }
       }
-      // Handle lists of types
+
       else if (expectedType is List<Type>) {
         final ok =
             actualValue == null ||
@@ -103,7 +108,7 @@ abstract class Schema {
           );
         }
       }
-      // Normal type check
+
       else {
         if (actualValue != null && actualValue.runtimeType != expectedType) {
           throw ArgumentError(
@@ -116,7 +121,6 @@ abstract class Schema {
     if (pointers.isNotEmpty) _fields['pointers'] = pointers;
     if (timestamps.isNotEmpty) _fields['timestamps'] = timestamps;
 
-    // Include schema name
     _fields['schema'] = schema;
   }
 
@@ -128,6 +132,20 @@ abstract class Schema {
 }
 
 /// A dynamic schema implementation, where field types are provided at runtime
+///
+/// Extends the base [Schema] class to allow dynamic creation of schemas
+/// with specified field types and a name.
+///
+/// Example:
+///
+/// ```dart
+/// final schema = DynamicSchema(
+///   {'field1': 'value1', 'field2': 42},
+///   {'field1': String, 'field2': int},
+///   'MySchema',
+/// );
+/// ```
+///
 class DynamicSchema extends Schema {
   final Map<String, Type> _hints;
   final String name;
@@ -142,6 +160,23 @@ class DynamicSchema extends Schema {
 }
 
 /// Helper function to create a schema dynamically
+///
+/// @param name The name of the schema
+/// @param fields A map of field names to their values
+/// @param hints A map of field names to their expected types
+///
+/// @return A [Schema] instance representing the dynamic schema
+///
+/// Example:
+///
+/// ```dart
+/// final schema = makeSchema(
+/// 'MySchema',
+/// {'field1': 'value1', 'field2': 42},
+/// {'field1': String, 'field2': int},
+/// );
+/// ```
+///
 Schema makeSchema(
   String name,
   Map<String, dynamic> fields,
