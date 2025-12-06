@@ -23,4 +23,4 @@ topics:
 license: MIT
 homepage: https://montygovernance.com
 documentation: https://pub.dev/documentation/montycat
-publish_to: "https://pub.dev" # Remove or set to "https://pub.dev" when ready to publish
+# publish_to: "https://pub.dev"
