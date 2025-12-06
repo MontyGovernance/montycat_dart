@@ -2,7 +2,7 @@ name: montycat
 description: >
   The easiest NoSQL database client for Dart and Flutter with async operations, real-time events, and in-memory or persistent storage.
 
-version: 1.0.2
+version: 1.0.3
 environment:
   sdk: ">=3.7.2 <4.0.0"
 
