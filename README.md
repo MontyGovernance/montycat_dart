@@ -1,6 +1,6 @@
 # 🚀 Montycat Dart Client — High-Performance NoSQL for Dart & Flutter
 
-[![pub package](https://img.shields.io/pub/v/montycat_dart.svg)](https://pub.dev/packages/montycat_dart)
+[![pub package](https://img.shields.io/pub/v/montycat.svg)](https://pub.dev/packages/montycat)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Say goodbye to slow, bloated, legacy databases. Say hello to Montycat — the Rust-powered, high-performance, real-time Data Mesh database that feels native to Dart & Flutter.

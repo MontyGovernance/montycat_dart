@@ -606,7 +606,7 @@ abstract class KV {
   /// keyspace.showProperties();
   /// ```
   ///
-  showProperties() {
+  void showProperties() {
     var map = <String, dynamic>{
       'host': host,
       'port': port,

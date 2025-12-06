@@ -10,7 +10,7 @@ import '../functions/generic.dart' show convertCustomKey, convertToBinaryQuery;
 /// Extends the base [KV] class to implement in-memory specific behavior.
 ///
 /// Example:
-/// 
+///
 /// ```dart
 /// final keyspace = KeyspaceInMemory(keyspace: 'my_in_memory_space');
 /// ```
@@ -81,9 +81,9 @@ class KeyspaceInMemory extends KV {
   ///
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// await keyspace.cleanSnapshotsForKeyspace();
   /// ```
@@ -112,9 +112,9 @@ class KeyspaceInMemory extends KV {
   ///
   /// Snapshots are only supported for in-memory keyspaces. Throws
   /// an [Exception] if invoked on a persistent keyspace.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// await keyspace.stopSnapshotsForKeyspace();
   /// ```
@@ -141,9 +141,9 @@ class KeyspaceInMemory extends KV {
 
   /// Creates a new keyspace with the current configuration.
   /// Throws an [ArgumentError] if [store] or [keyspace] is empty.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// await keyspace.createKeyspace();
   /// ```
@@ -172,9 +172,9 @@ class KeyspaceInMemory extends KV {
   /// If [latestVolume] is true, only the latest volume is queried.
   /// If [volumes] is provided, only those volumes are queried.
   /// Throws an [ArgumentError] if both [latestVolume] and [volumes] are specified.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// final keys = await keyspace.getKeys(latestVolume: true);
   /// ```
@@ -202,7 +202,7 @@ class KeyspaceInMemory extends KV {
   /// - [bulkValues]: List of values to insert.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [bulkValues] is empty.
-  /// 
+  ///
   /// Example:
   ///
   /// ```dart
@@ -234,7 +234,7 @@ class KeyspaceInMemory extends KV {
   /// If [customKey] is provided, it will be used instead of [key].
   /// The [updates] map contains the fields to update and their new values.
   /// For example: updates = {'field1': 'newValue', 'field2': 42}
-  /// 
+  ///
   /// Example:
   ///
   /// ```dart
@@ -273,9 +273,9 @@ class KeyspaceInMemory extends KV {
   /// Inserts a single [value] into the keyspace.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [value] is empty.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// await keyspace.insertValue(value: {'field1': 'value1'});
   /// ```
@@ -301,7 +301,7 @@ class KeyspaceInMemory extends KV {
   /// - [customKey] must not be empty.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [value] or [customKey] is empty.
-  /// 
+  ///
   /// Example:
   ///
   /// ```dart

@@ -84,9 +84,7 @@ abstract class Schema {
           pointers[attribute] = actualValue.serialize();
           _fields.remove(attribute);
         }
-      }
-
-      else if (expectedType == Timestamp) {
+      } else if (expectedType == Timestamp) {
         if (actualValue is! Timestamp && actualValue != null) {
           throw ArgumentError(
             "Attribute '$attribute' should be Timestamp, got ${actualValue.runtimeType}",
@@ -96,9 +94,7 @@ abstract class Schema {
           timestamps[attribute] = actualValue.serialize();
           _fields.remove(attribute);
         }
-      }
-
-      else if (expectedType is List<Type>) {
+      } else if (expectedType is List<Type>) {
         final ok =
             actualValue == null ||
             expectedType.any((t) => actualValue.runtimeType == t);
@@ -107,9 +103,7 @@ abstract class Schema {
             "Attribute '$attribute' should be one of $expectedType, got ${actualValue.runtimeType}",
           );
         }
-      }
-
-      else {
+      } else {
         if (actualValue != null && actualValue.runtimeType != expectedType) {
           throw ArgumentError(
             "Attribute '$attribute' should be $expectedType, got ${actualValue.runtimeType}",

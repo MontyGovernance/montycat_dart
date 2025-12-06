@@ -1,8 +1,8 @@
 name: montycat
 description: >
-  MontyCat Dart client: High-performance NoSQL database client for Dart and Flutter.
-  Supports asynchronous operations, real-time subscriptions, in-memory and persistent storage, and robust data governance.
-version: 1.0.1
+  The easiest NoSQL database client for Dart and Flutter with async operations, real-time events, and in-memory or persistent storage.
+
+version: 1.0.2
 environment:
   sdk: ">=3.7.2 <4.0.0"
 
@@ -21,6 +21,7 @@ topics:
   - realtime
 
 license: MIT
-homepage: https://montygovernance.com
-documentation: https://pub.dev/documentation/montycat
+homepage: https://github.com/MontyGovernance/montycat_dart
+repository: https://github.com/MontyGovernance/montycat_dart
+# documentation: https://pub.dev/documentation/montycat
 # publish_to: "https://pub.dev"
