@@ -351,5 +351,4 @@ class KeyspacePersistent extends KV {
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
     return await runQuery(host, port, query, useTls: useTls);
   }
-
 }

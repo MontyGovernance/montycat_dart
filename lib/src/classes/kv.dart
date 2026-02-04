@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:montycat/source.dart';
+import 'package:montycat/montycat.dart';
 
 import '../tools.dart' show Limit;
 import '../utils.dart' show sendData;
@@ -626,7 +626,7 @@ abstract class KV {
   /// keyspace.showProperties();
   /// ```
   ///
-  showProperties() {
+  void showProperties() {
     var map = <String, dynamic>{
       'host': host,
       'port': port,

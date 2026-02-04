@@ -169,7 +169,6 @@ class Engine {
     Permission permission, {
     List<String>? keyspaces,
   }) async {
-
     if (store == null) throw ArgumentError("Store must be specified");
 
     final List<String> command = [
