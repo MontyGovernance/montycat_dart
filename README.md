@@ -31,7 +31,7 @@ Add `montycat_dart` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat_dart: ^1.0.1
+  montycat_dart: ^1.0.4
 ```
 
 Then fetch packages:
@@ -47,23 +47,27 @@ flutter pub get
 ```dart
 import 'dart:async';
 import 'package:montycat/source.dart'
-    show Engine, KeyspaceInMemory, KeyspacePersistent, Timestamp, Schema;
-
-// define Schemas for your data (optional)
+    show
+        Engine,
+        KeyspaceInMemory,
+        KeyspacePersistent,
+        Timestamp,
+        Schema,
+        FieldType;
 
 class Customer extends Schema {
   Customer(super.kwargs);
 
   static String get schemaName => 'Customer';
 
-  static Map<String, Type> get schemaMetadata => {
-    'name': String,
-    'age': int,
-    'email': String,
+  static Map<String, FieldType> get schemaMetadata => {
+    'name': FieldType(String),
+    'age': FieldType(int, nullable: true),
+    'email': FieldType(String, nullable: true),
   };
 
   @override
-  Map<String, Type> metadata() => schemaMetadata;
+  Map<String, FieldType> metadata() => schemaMetadata;
 }
 
 class Orders extends Schema {
@@ -71,20 +75,17 @@ class Orders extends Schema {
 
   static String get schemaName => 'Orders';
 
-  static Map<String, Type> get schemaMetadata => {
-    'date': Timestamp,
-    'quantity': int,
-    'customer': String,
+  static Map<String, FieldType> get schemaMetadata => {
+    'date': FieldType(Timestamp),
+    'quantity': FieldType(int),
+    'customer': FieldType(String),
   };
 
   @override
-  Map<String, Type> metadata() => schemaMetadata;
+  Map<String, FieldType> metadata() => schemaMetadata;
 }
 
 Future<void> main() async {
-
-  // setup connection
-
   Engine engine = Engine(
     host: '127.0.0.1',
     port: 21210,
@@ -92,8 +93,6 @@ Future<void> main() async {
     password: '12345',
     store: 'Company',
   );
-
-  // create store and keyspaces
 
   KeyspaceInMemory customers = KeyspaceInMemory(keyspace: 'customers');
   KeyspacePersistent production = KeyspacePersistent(keyspace: 'production');
@@ -106,23 +105,15 @@ Future<void> main() async {
 
   print("Keyspaces created: $customersCreated, $productionCreated");
 
-  // run queries
-
-  var customer = Customer({
-    'name': 'Alice Smith',
-    'age': 28,
-    'email': 'alice.smith@example.com',
-  });
+  var customer = Customer({'name': 'Alice Smith', 'age': 28, 'email': null});
 
   var custInsert = await customers.insertValue(value: customer.serialize());
-
   print(custInsert);
   //{status: true, payload: 29095364578528255816148465894650046051, error: null}
 
   var custFetched = await customers.getValue(
     key: '30748150595091665781806646557034343545',
   );
-
   print(custFetched);
   //{status: true, payload: {name: Alice Smith, age: 28, email: alice.smith@example.com}, error: null}
 
@@ -130,19 +121,16 @@ Future<void> main() async {
     key: '30748150595091665781806646557034343545',
     updates: {'age': 29},
   );
-
   print(custUpdate);
   //{status: true, payload: null, error: null}
 
   var custDelete = await customers.deleteKey(
     key: '30748150595091665781806646557034343545',
   );
-
   print(custDelete);
   //{status: true, payload: null, error: null}
 
   var custVerifyKeys = await customers.getKeys();
-
   print(custVerifyKeys);
   //{status: true, payload: [], error: null}
 
@@ -153,14 +141,12 @@ Future<void> main() async {
   });
 
   var prodInsert = await production.insertValue(value: order.serialize());
-
   print(prodInsert);
   //{status: true, payload: 30442970696809394303186116932586352271, error: null}
 
   var prodFetched = await production.getValue(
     key: '30648912591862065620656997781578274575',
   );
-
   print(prodFetched);
   //{status: true, payload: {date: 2025-10-05T12:34:56.789Z, quantity: 3, customer: Name}, error: null}
 
@@ -168,7 +154,6 @@ Future<void> main() async {
     key: '30648912591862065620656997781578274575',
     updates: {'quantity': 10},
   );
-
   print(prodUpdate);
   //{status: true, payload: null, error: null}
 
@@ -177,7 +162,6 @@ Future<void> main() async {
     keyIncluded: true,
     schema: Orders.schemaName,
   );
-
   print(prodLookup);
   //{status: true, payload: [{__key__: 30442970696809394303186116932586352271, __value__: {date: 2025-10-05T12:34:56.789Z, quantity: 10, customer: Name}}], error: null}
 }

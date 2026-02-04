@@ -1,20 +1,26 @@
 import 'dart:async';
 import 'package:montycat/source.dart'
-    show Engine, KeyspaceInMemory, KeyspacePersistent, Timestamp, Schema;
+    show
+        Engine,
+        KeyspaceInMemory,
+        KeyspacePersistent,
+        Timestamp,
+        Schema,
+        FieldType;
 
 class Customer extends Schema {
   Customer(super.kwargs);
 
   static String get schemaName => 'Customer';
 
-  static Map<String, Type> get schemaMetadata => {
-    'name': String,
-    'age': int,
-    'email': String,
+  static Map<String, FieldType> get schemaMetadata => {
+    'name': FieldType(String),
+    'age': FieldType(int, nullable: true),
+    'email': FieldType(String, nullable: true),
   };
 
   @override
-  Map<String, Type> metadata() => schemaMetadata;
+  Map<String, FieldType> metadata() => schemaMetadata;
 }
 
 class Orders extends Schema {
@@ -22,18 +28,17 @@ class Orders extends Schema {
 
   static String get schemaName => 'Orders';
 
-  static Map<String, Type> get schemaMetadata => {
-    'date': Timestamp,
-    'quantity': int,
-    'customer': String,
+  static Map<String, FieldType> get schemaMetadata => {
+    'date': FieldType(Timestamp),
+    'quantity': FieldType(int),
+    'customer': FieldType(String),
   };
 
   @override
-  Map<String, Type> metadata() => schemaMetadata;
+  Map<String, FieldType> metadata() => schemaMetadata;
 }
 
 Future<void> main() async {
-
   Engine engine = Engine(
     host: '127.0.0.1',
     port: 21210,
@@ -53,11 +58,7 @@ Future<void> main() async {
 
   print("Keyspaces created: $customersCreated, $productionCreated");
 
-  var customer = Customer({
-    'name': 'Alice Smith',
-    'age': 28,
-    'email': 'alice.smith@example.com',
-  });
+  var customer = Customer({'name': 'Alice Smith', 'age': 28, 'email': null});
 
   var custInsert = await customers.insertValue(value: customer.serialize());
   print(custInsert);

@@ -1,5 +1,22 @@
 import 'tools.dart';
 
+/// Represents the type and nullability of a schema field.
+///
+/// Used in schema metadata definitions.
+///
+/// Example:
+///
+/// ```dart
+/// 'age': FieldType(int, nullable: true),
+/// ```
+///
+class FieldType {
+  final Type type;
+  final bool nullable;
+
+  const FieldType(this.type, {this.nullable = false});
+}
+
 /// Base abstract class for defining Montycat schemas.
 ///
 /// Handles:
@@ -48,7 +65,7 @@ abstract class Schema {
   void checkMissingFields(Map<String, dynamic> hints) {
     for (final entry in hints.entries) {
       final key = entry.key;
-      if (_fields[key] == null) {
+      if (_fields[key] == null && !entry.value.nullable) {
         throw ArgumentError("Missing required field: '$key'");
       }
     }
@@ -74,7 +91,7 @@ abstract class Schema {
     hints.forEach((attribute, expectedType) {
       final actualValue = _fields[attribute];
 
-      if (expectedType == Pointer) {
+      if (expectedType.type == Pointer) {
         if (actualValue is! Pointer && actualValue != null) {
           throw ArgumentError(
             "Attribute '$attribute' should be Pointer, got ${actualValue.runtimeType}",
@@ -84,9 +101,7 @@ abstract class Schema {
           pointers[attribute] = actualValue.serialize();
           _fields.remove(attribute);
         }
-      }
-
-      else if (expectedType == Timestamp) {
+      } else if (expectedType.type == Timestamp) {
         if (actualValue is! Timestamp && actualValue != null) {
           throw ArgumentError(
             "Attribute '$attribute' should be Timestamp, got ${actualValue.runtimeType}",
@@ -96,21 +111,18 @@ abstract class Schema {
           timestamps[attribute] = actualValue.serialize();
           _fields.remove(attribute);
         }
-      }
-
-      else if (expectedType is List<Type>) {
+      } else if (expectedType.type is List<Type>) {
         final ok =
             actualValue == null ||
-            expectedType.any((t) => actualValue.runtimeType == t);
+            expectedType.type.any((t) => actualValue.runtimeType == t);
         if (!ok) {
           throw ArgumentError(
             "Attribute '$attribute' should be one of $expectedType, got ${actualValue.runtimeType}",
           );
         }
-      }
-
-      else {
-        if (actualValue != null && actualValue.runtimeType != expectedType) {
+      } else {
+        if (actualValue != null &&
+            actualValue.runtimeType != expectedType.type) {
           throw ArgumentError(
             "Attribute '$attribute' should be $expectedType, got ${actualValue.runtimeType}",
           );
@@ -140,14 +152,13 @@ abstract class Schema {
 ///
 /// ```dart
 /// final schema = DynamicSchema(
-///   {'field1': 'value1', 'field2': 42},
-///   {'field1': String, 'field2': int},
+///   {'field1': FieldType(String), 'field2': FieldType(int)},
 ///   'MySchema',
 /// );
 /// ```
 ///
 class DynamicSchema extends Schema {
-  final Map<String, Type> _hints;
+  final Map<String, FieldType> _hints;
   final String name;
 
   DynamicSchema(super.fields, this._hints, this.name);
@@ -156,7 +167,7 @@ class DynamicSchema extends Schema {
   String get schema => name;
 
   @override
-  Map<String, Type> metadata() => _hints;
+  Map<String, FieldType> metadata() => _hints;
 }
 
 /// Helper function to create a schema dynamically
@@ -172,15 +183,14 @@ class DynamicSchema extends Schema {
 /// ```dart
 /// final schema = makeSchema(
 /// 'MySchema',
-/// {'field1': 'value1', 'field2': 42},
-/// {'field1': String, 'field2': int},
+/// {'field1': FieldType(String , nullable: true), 'field2': FieldType(int)},
 /// );
 /// ```
 ///
 Schema makeSchema(
   String name,
   Map<String, dynamic> fields,
-  Map<String, Type> hints,
+  Map<String, FieldType> hints,
 ) {
   return DynamicSchema(fields, hints, name);
 }

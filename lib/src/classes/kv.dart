@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:montycat/source.dart';
 
-import '../tools.dart' show Limit, Pointer, Timestamp;
+import '../tools.dart' show Limit;
 import '../utils.dart' show sendData;
 import '../functions/generic.dart'
     show convertCustomKey, convertToBinaryQuery, convertCustomKeysValues;
@@ -126,47 +126,66 @@ abstract class KV {
   /// }
   ///
   /// await keyspace.enforceSchema(
-  /// schema: Orders.schemaMetadata,
+  /// schemaMetadata: Orders.schemaMetadata,
   /// schemaName: Orders.schemaName,
   /// );
   ///```
   ///
   Future<dynamic> enforceSchema({
-    required Map<String, Type> schema,
+    required Map<String, FieldType> schemaMetadata,
     required String schemaName,
   }) async {
-    if (schema.isEmpty) {
+    if (schemaMetadata.isEmpty) {
       throw Exception('No schema provided for enforcement');
     }
 
-    /// Converts a Dart [Type] into a MontyCat schema type string.
-    String parseType(Type fieldType) {
-      final typeStr = fieldType.toString();
+    Map<String, dynamic> parseType(FieldType fieldType) {
+      final typeStr = fieldType.type.toString();
+      final isNullable = fieldType.nullable;
 
-      if (fieldType == String) {
-        return 'String';
-      } else if (fieldType == int) {
-        return 'Number';
-      } else if (fieldType == double) {
-        return 'Float';
-      } else if (fieldType == bool) {
-        return 'Boolean';
-      } else if (typeStr.startsWith('List<') || fieldType == List) {
-        return 'Array';
-      } else if (typeStr.startsWith('Map<') || fieldType == Map) {
-        return 'Object';
-      } else if (fieldType == Pointer) {
-        return 'Pointer';
-      } else if (fieldType == Timestamp) {
-        return 'Timestamp';
-      } else {
-        throw TypeError();
+      late String ty;
+
+      switch (typeStr) {
+        case 'String':
+          ty = 'String';
+          break;
+        case 'int':
+        case 'double':
+          ty = 'Number';
+          break;
+        case 'bool':
+          ty = 'Boolean';
+          break;
+        case 'List':
+          ty = 'Array';
+          break;
+        case 'Map':
+          ty = 'Object';
+          break;
+        case 'Pointer':
+          ty = 'Pointer';
+          break;
+        case 'Timestamp':
+          ty = 'Timestamp';
+          break;
+        default:
+          if (typeStr.startsWith('List<')) {
+            ty = 'Array';
+          } else if (typeStr.startsWith('Map<')) {
+            ty = 'Object';
+          } else {
+            throw TypeError();
+          }
       }
+
+      return {'type': ty, 'nullable': isNullable};
     }
 
-    final schemaTypes = <String, String>{};
-    for (var entry in schema.entries) {
-      schemaTypes[entry.key] = parseType(entry.value);
+    final schemaTypes = <String, List<dynamic>>{};
+
+    for (final entry in schemaMetadata.entries) {
+      final parsed = parseType(entry.value);
+      schemaTypes[entry.key] = [parsed['type'], parsed['nullable']];
     }
 
     final queryMap = {
@@ -181,20 +200,21 @@ abstract class KV {
         'schema_name',
         schemaName,
         'schema_content',
-        jsonEncode(schemaTypes).toString(),
+        jsonEncode(schemaTypes),
       ],
       'credentials': [username, password],
     };
 
     final queryBytes = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
+
     return await runQuery(host, port, queryBytes, useTls: useTls);
   }
 
   /// Removes a previously enforced schema from the keyspace.
   /// Throws an [ArgumentError] if [schema] is empty.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// await keyspace.removeEnforcedSchema('Orders');
   /// ```
@@ -225,9 +245,9 @@ abstract class KV {
   /// - [keyIncluded]: If true, includes the key in the response.
   /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
   /// Throws an [ArgumentError] if no valid key is provided.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// final result = await keyspace.getValue(
   ///   key: 'some_key',
@@ -271,9 +291,9 @@ abstract class KV {
 
   /// Deletes a single key from the store.
   /// Throws an [ArgumentError] if no valid key is provided.
-  /// 
+  ///
   /// Example:
-  /// 
+  ///
   /// ```dart
   /// await keyspace.deleteKey(key: 'some_key');
   /// ```
@@ -335,7 +355,7 @@ abstract class KV {
   /// Throws an [ArgumentError] if no valid keys are provided.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
-  /// 
+  ///
   /// Example:
   ///
   /// ```dart
