@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:montycat/source.dart'
+import 'package:montycat/montycat.dart'
     show
         Engine,
         KeyspaceInMemory,
