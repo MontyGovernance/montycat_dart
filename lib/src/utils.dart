@@ -99,11 +99,14 @@ Future<dynamic> sendData(
       return recursiveParseJson(line.trim());
     }
   } on SocketException catch (e) {
-    return "SocketError: $e (address: $host, port: $port)";
+    print("SocketException: $e (address: $host, port: $port)");
+    return e;
   } on TimeoutException catch (e) {
-    return "TimeoutError: $e (address: $host, port: $port)";
+    print("TimeoutException: $e (address: $host, port: $port)");
+    return e;
   } catch (e) {
-    return "Error: $e";
+    print("Unexpected error: $e (address: $host, port: $port)");
+    return e;
   }
 }
 

@@ -294,6 +294,12 @@ class KeyspacePersistent extends KV {
   /// ```
   ///
   Future<dynamic> createKeyspace() async {
+    if (store == null || store!.isEmpty) {
+      throw ArgumentError("Store name cannot be empty.");
+    }
+
+    var cacheValue = cache != null ? cache.toString() : "0";
+
     final queryMap = {
       "raw": [
         "create-keyspace",
@@ -306,7 +312,7 @@ class KeyspacePersistent extends KV {
         "distributed",
         distributed ? "y" : "n",
         "cache",
-        cache ?? "0",
+        cacheValue,
         "compression",
         compression == true ? "y" : "n",
       ],
