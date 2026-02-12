@@ -5,7 +5,11 @@ import 'package:montycat/montycat.dart';
 import '../tools.dart' show Limit;
 import '../utils.dart' show sendData;
 import '../functions/generic.dart'
-    show convertCustomKey, convertToBinaryQuery, convertCustomKeysValues;
+    show
+        convertCustomKey,
+        convertCustomKeys,
+        convertCustomKeysValues,
+        convertToBinaryQuery;
 
 /// Abstract base class for interacting with the MontyCat database.
 /// Provides methods for connection handling, schema enforcement,
@@ -334,7 +338,8 @@ abstract class KV {
     List<String> bulkCustomKeys = const [],
   }) async {
     if (bulkCustomKeys.isNotEmpty) {
-      bulkKeys = [...bulkKeys, ...bulkCustomKeys];
+      List<String> bulkCustomKeysConverted = convertCustomKeys(bulkCustomKeys);
+      bulkKeys = [...bulkKeys, ...bulkCustomKeysConverted];
     }
 
     if (bulkKeys.isEmpty) {
@@ -378,7 +383,8 @@ abstract class KV {
     }
 
     if (bulkCustomKeys.isNotEmpty) {
-      bulkKeys = [...bulkKeys, ...bulkCustomKeys];
+      List<String> bulkCustomKeysConverted = convertCustomKeys(bulkCustomKeys);
+      bulkKeys = [...bulkKeys, ...bulkCustomKeysConverted];
     }
 
     if (bulkKeys.isEmpty) {

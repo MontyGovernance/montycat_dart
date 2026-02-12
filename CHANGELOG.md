@@ -19,3 +19,4 @@
 - Added documentation
 - Added changelog
 - Added GitHub link
+- Fixed bulk custom keys conversion
