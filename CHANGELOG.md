@@ -13,3 +13,6 @@
 ## 1.0.5
 - Cache value fix
 - Populate errors directly if connection is unsuccesfull
+
+## 1.0.6
+- Fixed empty string insertion
