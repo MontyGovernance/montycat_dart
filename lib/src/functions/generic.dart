@@ -28,7 +28,7 @@ Map<String, dynamic> convertCustomKeysValues(Map<String, dynamic> keysValues) {
 /// - Converts Pointer objects using `serialize()`.
 /// - Converts Timestamp objects using `serialize()`.
 /// - Processes nested 'pointers' entries to ensure keys are hashed or stringified.
-Map<String, dynamic> modifyPointers(Map<String, dynamic> value) {
+Map<String, dynamic> modifyPointers(dynamic value) {
   try {
     final updatedValue = Map<String, dynamic>.from(value);
     for (var entry in updatedValue.entries) {
@@ -94,12 +94,10 @@ Uint8List convertToBinaryQuery({
   bulkKeys = bulkKeys ?? [];
   bulkKeysValues = bulkKeysValues ?? {};
 
-  // Process single value for pointers/timestamps
-  if (value.isNotEmpty) {
+  if (value.isNotEmpty && value is Map<String, dynamic>) {
     value = modifyPointers(value);
   }
 
-  // Process bulk values and ensure consistent schema
   if (bulkValues.isNotEmpty && bulkValues.first is Map<String, dynamic>) {
     final schemas = bulkValues.map((item) => item['schema'] as String?).toSet();
     if (schemas.length > 1) {
@@ -108,33 +106,33 @@ Uint8List convertToBinaryQuery({
     schema = schemas.first;
     bulkValues =
         bulkValues.map((item) {
+          if (item is! Map<String, dynamic>) {
+            return item;
+          }
           final filtered = Map<String, dynamic>.from(item)..remove('schema');
           return modifyPointers(filtered);
         }).toList();
   }
 
-  // Process bulk key-values
   if (bulkKeysValues.isNotEmpty) {
     bulkKeysValues = {
       for (var entry in bulkKeysValues.entries)
-        entry.key: modifyPointers(entry.value),
+        if (entry.value is Map<String, dynamic>)
+          entry.key: modifyPointers(entry.value),
     };
   }
 
-  // Convert bulkKeys to strings
   if (bulkKeys.isNotEmpty) {
     bulkKeys = bulkKeys.map((k) => k.toString()).toList();
   }
 
-  // Extract schema from value if present
-  if (value.containsKey('schema')) {
+  if (value is Map<String, dynamic> && value.containsKey('schema')) {
     schema = value['schema'] as String?;
     value = Map<String, dynamic>.from(value)..remove('schema');
   }
 
   searchCriteria = handleTimestampsAndPointers(searchCriteria);
 
-  // Construct query dictionary
   final queryDict = {
     'schema': schema,
     'username': cls.username,
