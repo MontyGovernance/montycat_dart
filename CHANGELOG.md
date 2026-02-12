@@ -16,3 +16,6 @@
 
 ## 1.0.6
 - Fixed empty string insertion
+- Added documentation
+- Added changelog
+- Added GitHub link
