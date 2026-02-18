@@ -58,6 +58,8 @@ Future<void> main() async {
 
   print("Keyspaces created: $customersCreated, $productionCreated");
 
+  // ---IN-MEMORY KEYSPACE--- //
+
   var customer = Customer({'name': 'Alice Smith', 'age': 28, 'email': null});
 
   var custInsert = await customers.insertValue(value: customer.serialize());
@@ -66,14 +68,14 @@ Future<void> main() async {
   //{status: true, payload: 29095364578528255816148465894650046051, error: null}
 
   var custFetched = await customers.getValue(
-    key: '30748150595091665781806646557034343545',
+    key: '29095364578528255816148465894650046051',
   );
 
   print(custFetched);
   //{status: true, payload: {name: Alice Smith, age: 28, email: alice.smith@example.com}, error: null}
 
   var custUpdate = await customers.updateValue(
-    key: '30748150595091665781806646557034343545',
+    key: '29095364578528255816148465894650046051',
     updates: {'age': 29},
   );
 
@@ -81,7 +83,7 @@ Future<void> main() async {
   //{status: true, payload: null, error: null}
 
   var custDelete = await customers.deleteKey(
-    key: '30748150595091665781806646557034343545',
+    key: '29095364578528255816148465894650046051',
   );
 
   print(custDelete);
@@ -91,6 +93,8 @@ Future<void> main() async {
 
   print(custVerifyKeys);
   //{status: true, payload: [], error: null}
+
+  // ---PERSISTENT KEYSPACE--- //
 
   var order = Orders({
     'date': Timestamp(timestamp: DateTime.now().toUtc().toString()),
@@ -104,14 +108,14 @@ Future<void> main() async {
   //{status: true, payload: 30442970696809394303186116932586352271, error: null}
 
   var prodFetched = await production.getValue(
-    key: '30648912591862065620656997781578274575',
+    key: '30442970696809394303186116932586352271',
   );
 
   print(prodFetched);
   //{status: true, payload: {date: 2025-10-05T12:34:56.789Z, quantity: 3, customer: Name}, error: null}
 
   var prodUpdate = await production.updateValue(
-    key: '30648912591862065620656997781578274575',
+    key: '30442970696809394303186116932586352271',
     updates: {'quantity': 10},
   );
 

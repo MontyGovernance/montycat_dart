@@ -20,3 +20,4 @@
 - Added changelog
 - Added GitHub link
 - Fixed bulk custom keys conversion
+- Added retrieval by volume in getBulk() function for both types of keyspaces

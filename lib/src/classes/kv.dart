@@ -357,6 +357,8 @@ abstract class KV {
   /// Supports [limit] as `[start, stop]` and optional [withPointers].
   /// - [keyIncluded]: If true, includes the key in the response.
   /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
+  /// - [volumes]: List of Strings representing internal volumes
+  /// - [latestVolume]: If true, the database will return all the values from the latest volume
   /// Throws an [ArgumentError] if no valid keys are provided.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
@@ -375,6 +377,8 @@ abstract class KV {
     bool withPointers = false,
     bool keyIncluded = false,
     bool pointersMetadata = false,
+    List<String> volumes = const [],
+    bool latestVolume = false,
   }) async {
     if (pointersMetadata && withPointers) {
       throw ArgumentError(
@@ -387,11 +391,16 @@ abstract class KV {
       bulkKeys = [...bulkKeys, ...bulkCustomKeysConverted];
     }
 
-    if (bulkKeys.isEmpty) {
-      throw ArgumentError("No keys provided for retrieval.");
-    }
+    int selectedOptions = 0;
+    if (bulkKeys.isNotEmpty) selectedOptions += 1;
+    if (volumes.isNotEmpty) selectedOptions += 1;
+    if (latestVolume) selectedOptions += 1;
 
-    command = "get_bulk";
+    if (selectedOptions != 1) {
+      throw ArgumentError(
+        "Multiple conflicting options provided. Please provide exactly one of the following: keys, volumes, or latest volume.",
+      );
+    }
 
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
@@ -401,12 +410,16 @@ abstract class KV {
       );
     }
 
+    command = "get_bulk";
+
     final query = convertToBinaryQuery(
       cls: this,
       bulkKeys: bulkKeys,
       withPointers: withPointers,
       keyIncluded: keyIncluded,
       pointersMetadata: pointersMetadata,
+      volumes: volumes,
+      latestVolume: latestVolume,
     );
 
     return await runQuery(host, port, query, useTls: useTls);
