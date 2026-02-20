@@ -398,7 +398,7 @@ abstract class KV {
 
     if (selectedOptions != 1) {
       throw ArgumentError(
-        "Multiple conflicting options provided. Please provide exactly one of the following: keys, volumes, or latest volume.",
+        "Multiple conflicting options provided or no options provided. Please provide exactly one of the following: keys, volumes, or latest volume.",
       );
     }
 
