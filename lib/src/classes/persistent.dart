@@ -240,7 +240,12 @@ class KeyspacePersistent extends KV {
   }) async {
     command = "get_keys";
 
-    if (!latestVolume && volumes.isEmpty && limit.isEmpty) {
+    if (!latestVolume &&
+        volumes.isEmpty &&
+        limit.isEmpty &&
+        (limit.isEmpty ||
+            limit.length != 2 ||
+            (limit[0] == 0 && limit[1] == 0))) {
       throw ArgumentError(
         "Please provide volumes/latest volume or valid limit range.",
       );

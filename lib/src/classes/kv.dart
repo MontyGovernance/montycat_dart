@@ -389,7 +389,9 @@ abstract class KV {
     if (bulkKeys.isNotEmpty) selectedOptions += 1;
     if (volumes.isNotEmpty ||
         latestVolume ||
-        (limit.isNotEmpty && limit.length == 2 && limit[0] < limit[1])) {
+        (limit.isNotEmpty &&
+            limit.length == 2 &&
+            (limit[0] != 0 || limit[1] != 0))) {
       selectedOptions += 1;
     }
 
@@ -528,12 +530,6 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-    if (pointersMetadata && withPointers) {
-      throw ArgumentError(
-        "You select both pointers value and pointers metadata. Choose one.",
-      );
-    }
-
     command = "lookup_values";
 
     if (limit.length == 2) {
