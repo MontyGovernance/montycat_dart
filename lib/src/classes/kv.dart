@@ -359,7 +359,7 @@ abstract class KV {
   /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
   /// - [volumes]: List of Strings representing internal volumes
   /// - [latestVolume]: If true, the database will return all the values from the latest volume
-  /// Throws an [ArgumentError] if no valid keys are provided.
+  /// Throws an [ArgumentError] if [bulkKeys]/[bulkCustomKeys] or [latestVolume] or [volumes] or [limit] are not provided.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
   ///
@@ -387,11 +387,13 @@ abstract class KV {
 
     int selectedOptions = 0;
     if (bulkKeys.isNotEmpty) selectedOptions += 1;
-    if (volumes.isNotEmpty || latestVolume) selectedOptions += 1;
+    if (volumes.isNotEmpty || latestVolume || limit.isNotEmpty) {
+      selectedOptions += 1;
+    }
 
     if (selectedOptions != 1) {
       throw ArgumentError(
-        "Multiple conflicting options provided. Please provide keys or volumes/latest volume.",
+        "Please provide keys or volumes/latest volume or limit.",
       );
     }
 
