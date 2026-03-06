@@ -183,12 +183,6 @@ class KeyspaceInMemory extends KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    if (latestVolume && volumes.isNotEmpty) {
-      throw ArgumentError(
-        "Select either latest volume or volumes list, not both.",
-      );
-    }
-
     command = "get_keys";
     final query = convertToBinaryQuery(
       cls: this,
@@ -254,7 +248,7 @@ class KeyspaceInMemory extends KV {
     }
 
     if (updates == null || updates.isEmpty) {
-      throw ArgumentError("No filters provided");
+      throw ArgumentError("No updates provided");
     }
     if (key == null || key.isEmpty) {
       throw ArgumentError("No key provided");

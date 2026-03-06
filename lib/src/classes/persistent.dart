@@ -238,15 +238,8 @@ class KeyspacePersistent extends KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    if (latestVolume && volumes.isNotEmpty) {
-      throw ArgumentError(
-        "Select either latest volume or volumes list, not both.",
-      );
-    }
-
     command = "get_keys";
 
-    // Check limit
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {

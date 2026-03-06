@@ -380,12 +380,6 @@ abstract class KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    if (pointersMetadata && withPointers) {
-      throw ArgumentError(
-        "You select both pointers value and pointers metadata. Choose one.",
-      );
-    }
-
     if (bulkCustomKeys.isNotEmpty) {
       List<String> bulkCustomKeysConverted = convertCustomKeys(bulkCustomKeys);
       bulkKeys = [...bulkKeys, ...bulkCustomKeysConverted];
@@ -393,12 +387,11 @@ abstract class KV {
 
     int selectedOptions = 0;
     if (bulkKeys.isNotEmpty) selectedOptions += 1;
-    if (volumes.isNotEmpty) selectedOptions += 1;
-    if (latestVolume) selectedOptions += 1;
+    if (volumes.isNotEmpty || latestVolume) selectedOptions += 1;
 
     if (selectedOptions != 1) {
       throw ArgumentError(
-        "Multiple conflicting options provided or no options provided. Please provide exactly one of the following: keys, volumes, or latest volume.",
+        "Multiple conflicting options provided. Please provide keys or volumes/latest volume.",
       );
     }
 
@@ -449,7 +442,7 @@ abstract class KV {
     Map<String, dynamic> bulkCustomKeysValues = const {},
   }) async {
     if (bulkKeysValues.isEmpty && bulkCustomKeysValues.isEmpty) {
-      throw Exception("No key-value pairs provided for update.");
+      throw ArgumentError("No key-value pairs provided for update.");
     }
 
     Map<String, dynamic> finalMap = Map.from(bulkKeysValues);
