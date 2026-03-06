@@ -387,7 +387,9 @@ abstract class KV {
 
     int selectedOptions = 0;
     if (bulkKeys.isNotEmpty) selectedOptions += 1;
-    if (volumes.isNotEmpty || latestVolume || limit.isNotEmpty) {
+    if (volumes.isNotEmpty ||
+        latestVolume ||
+        (limit.isNotEmpty && limit.length == 2 && limit[0] < limit[1])) {
       selectedOptions += 1;
     }
 
