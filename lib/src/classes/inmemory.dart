@@ -171,7 +171,7 @@ class KeyspaceInMemory extends KV {
   /// Retrieves all keys stored in this keyspace.
   /// If [latestVolume] is true, only the latest volume is queried.
   /// If [volumes] is provided, only those volumes are queried.
-  /// Throws an [ArgumentError] if both [latestVolume] and [volumes] are specified.
+  /// Throws an [ArgumentError] if neither [latestVolume] nor [volumes] are provided.
   ///
   /// Example:
   ///
@@ -183,10 +183,8 @@ class KeyspaceInMemory extends KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    if (latestVolume && volumes.isNotEmpty) {
-      throw ArgumentError(
-        "Select either latest volume or volumes list, not both.",
-      );
+    if (!latestVolume && volumes.isEmpty) {
+      throw ArgumentError("Please provide volumes/latest volume.");
     }
 
     command = "get_keys";
@@ -254,7 +252,7 @@ class KeyspaceInMemory extends KV {
     }
 
     if (updates == null || updates.isEmpty) {
-      throw ArgumentError("No filters provided");
+      throw ArgumentError("No updates provided");
     }
     if (key == null || key.isEmpty) {
       throw ArgumentError("No key provided");

@@ -359,7 +359,7 @@ abstract class KV {
   /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
   /// - [volumes]: List of Strings representing internal volumes
   /// - [latestVolume]: If true, the database will return all the values from the latest volume
-  /// Throws an [ArgumentError] if no valid keys are provided.
+  /// Throws an [ArgumentError] if [bulkKeys]/[bulkCustomKeys] or [latestVolume] or [volumes] or [limit] are not provided.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   /// Combines [bulkKeys] and [bulkCustomKeys] into a single list.
   ///
@@ -380,12 +380,6 @@ abstract class KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    if (pointersMetadata && withPointers) {
-      throw ArgumentError(
-        "You select both pointers value and pointers metadata. Choose one.",
-      );
-    }
-
     if (bulkCustomKeys.isNotEmpty) {
       List<String> bulkCustomKeysConverted = convertCustomKeys(bulkCustomKeys);
       bulkKeys = [...bulkKeys, ...bulkCustomKeysConverted];
@@ -393,12 +387,17 @@ abstract class KV {
 
     int selectedOptions = 0;
     if (bulkKeys.isNotEmpty) selectedOptions += 1;
-    if (volumes.isNotEmpty) selectedOptions += 1;
-    if (latestVolume) selectedOptions += 1;
+    if (volumes.isNotEmpty ||
+        latestVolume ||
+        (limit.isNotEmpty &&
+            limit.length == 2 &&
+            (limit[0] != 0 || limit[1] != 0))) {
+      selectedOptions += 1;
+    }
 
     if (selectedOptions != 1) {
       throw ArgumentError(
-        "Multiple conflicting options provided or no options provided. Please provide exactly one of the following: keys, volumes, or latest volume.",
+        "Please provide keys or volumes/latest volume or limit.",
       );
     }
 
@@ -449,7 +448,7 @@ abstract class KV {
     Map<String, dynamic> bulkCustomKeysValues = const {},
   }) async {
     if (bulkKeysValues.isEmpty && bulkCustomKeysValues.isEmpty) {
-      throw Exception("No key-value pairs provided for update.");
+      throw ArgumentError("No key-value pairs provided for update.");
     }
 
     Map<String, dynamic> finalMap = Map.from(bulkKeysValues);
@@ -531,12 +530,6 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-    if (pointersMetadata && withPointers) {
-      throw ArgumentError(
-        "You select both pointers value and pointers metadata. Choose one.",
-      );
-    }
-
     command = "lookup_values";
 
     if (limit.length == 2) {

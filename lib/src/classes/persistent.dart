@@ -221,7 +221,7 @@ class KeyspacePersistent extends KV {
   /// Get all keys in the keyspace with optional [limit].
   /// If [latestVolume] is true, only the latest volume is queried.
   /// If [volumes] is provided, only those volumes are queried.
-  /// Throws an [ArgumentError] if both [latestVolume] and [volumes] are set.
+  /// Throws an [ArgumentError] if neither [latestVolume] nor [volumes] are provided or limit is not set.
   /// Throws an [ArgumentError] if [limit] is not a list of two integers.
   ///
   /// Example:
@@ -238,15 +238,19 @@ class KeyspacePersistent extends KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    if (latestVolume && volumes.isNotEmpty) {
+    command = "get_keys";
+
+    if (!latestVolume &&
+        volumes.isEmpty &&
+        limit.isEmpty &&
+        (limit.isEmpty ||
+            limit.length != 2 ||
+            (limit[0] == 0 && limit[1] == 0))) {
       throw ArgumentError(
-        "Select either latest volume or volumes list, not both.",
+        "Please provide volumes/latest volume or valid limit range.",
       );
     }
 
-    command = "get_keys";
-
-    // Check limit
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
