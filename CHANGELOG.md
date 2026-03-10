@@ -21,3 +21,10 @@
 - Added GitHub link
 - Fixed bulk custom keys conversion
 - Added retrieval by volume in getBulk() function for both types of keyspaces
+
+## 1.0.7
+- Fixed connection timeout
+
+## 1.0.8
+- Fixed bulk write
+- Fixed bulk read
