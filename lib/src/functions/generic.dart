@@ -73,7 +73,9 @@ Map<String, dynamic> modifyPointers(dynamic value) {
 /// - Pointers and Timestamps
 /// - Optional schema, limits, search criteria
 Uint8List convertToBinaryQuery({
-  dynamic cls,
+  required dynamic cls,
+  required String command,
+  Map<String, int> limitOutput = const {},
   String? key,
   Map<String, dynamic>? searchCriteria,
   dynamic value,
@@ -141,10 +143,10 @@ Uint8List convertToBinaryQuery({
     'store': cls.store,
     'persistent': cls.persistent,
     'distributed': cls.distributed,
-    'limit_output': cls.limitOutput,
+    'limit_output': limitOutput,
     'key': key?.toString(),
     'value': jsonEncode(value),
-    'command': cls.command,
+    'command': command,
     'expire': expireSec,
     'bulk_values': bulkValues.map((v) => jsonEncode(v)).toList(),
     'bulk_keys': bulkKeys,

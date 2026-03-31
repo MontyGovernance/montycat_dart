@@ -28,12 +28,6 @@ class KeyspacePersistent extends KV {
   /// [keyspace] is the name of the keyspace.
   KeyspacePersistent({required String keyspace}) : _keyspace = keyspace;
 
-  /// Cache size for this keyspace (null = not set).
-  int? cache;
-
-  /// Compression flag (true = enabled, false = disabled, null = not set).
-  bool? compression;
-
   /// Keyspace name getter.
   @override
   String get keyspace => _keyspace;
@@ -62,54 +56,6 @@ class KeyspacePersistent extends KV {
     super.persistent = value ?? true;
   }
 
-  /// Subscribe to changes on a specific key or custom key.
-  /// If [callback] is provided, it will be called on updates.
-  /// If no key is provided, subscribes to all changes in the keyspace.
-  /// If [customKey] is provided, it will be used instead of [key].
-  /// Note: Each subscription increments the port by 1.
-  /// Make sure to manage ports accordingly.
-  ///
-  /// Example:
-  ///
-  /// ```dart
-  /// await keyspace.subscribe(
-  /// key: 'my_key',
-  /// callback: (data) {
-  ///  print('Received update: $data');
-  /// });
-  /// ```
-  ///
-  Future<dynamic> subscribe({
-    String? key,
-    String? customKey,
-    void Function(dynamic)? callback,
-  }) async {
-    if (customKey != null && customKey.isNotEmpty) {
-      key = convertCustomKey(customKey);
-    }
-
-    var usePort = port + 1;
-
-    var queryObj = {
-      "subscribe": true,
-      "store": store,
-      "keyspace": keyspace,
-      "username": username,
-      "password": password,
-      "key": key,
-    };
-
-    final query = Uint8List.fromList(utf8.encode(jsonEncode(queryObj)));
-
-    return await runQuery(
-      host,
-      usePort,
-      query,
-      callback: callback,
-      useTls: useTls,
-    );
-  }
-
   /// Insert a custom key into the keyspace.
   /// Throws an [ArgumentError] if [customKey] is empty.
   ///
@@ -125,9 +71,11 @@ class KeyspacePersistent extends KV {
     }
 
     final customKeyConverted = convertCustomKey(customKey);
-    command = "insert_custom_key";
-
-    final query = convertToBinaryQuery(cls: this, key: customKeyConverted);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "insert_custom_key",
+      key: customKeyConverted,
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -152,10 +100,9 @@ class KeyspacePersistent extends KV {
     }
 
     final customKeyConverted = convertCustomKey(customKey);
-    command = "insert_custom_key_value";
-
     final query = convertToBinaryQuery(
       cls: this,
+      command: "insert_custom_key_value",
       key: customKeyConverted,
       value: value,
     );
@@ -176,9 +123,11 @@ class KeyspacePersistent extends KV {
       throw ArgumentError("No value provided for insertion.");
     }
 
-    command = "insert_value";
-
-    final query = convertToBinaryQuery(cls: this, value: value);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "insert_value",
+      value: value,
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -212,9 +161,12 @@ class KeyspacePersistent extends KV {
       throw ArgumentError("No key provided");
     }
 
-    command = "update_value";
-
-    final query = convertToBinaryQuery(cls: this, key: key, value: updates);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "update_value",
+      key: key,
+      value: updates,
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -238,8 +190,6 @@ class KeyspacePersistent extends KV {
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
-    command = "get_keys";
-
     if (!latestVolume &&
         volumes.isEmpty &&
         limit.isEmpty &&
@@ -251,6 +201,7 @@ class KeyspacePersistent extends KV {
       );
     }
 
+    Map<String, int> limitOutput = {};
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
@@ -261,6 +212,8 @@ class KeyspacePersistent extends KV {
 
     final query = convertToBinaryQuery(
       cls: this,
+      command: "get_keys",
+      limitOutput: limitOutput,
       volumes: volumes,
       latestVolume: latestVolume,
     );
@@ -283,8 +236,11 @@ class KeyspacePersistent extends KV {
       throw ArgumentError("No values provided for bulk insertion.");
     }
 
-    command = "insert_bulk";
-    final query = convertToBinaryQuery(cls: this, bulkValues: bulkValues);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "insert_bulk",
+      bulkValues: bulkValues,
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -297,7 +253,7 @@ class KeyspacePersistent extends KV {
   /// await keyspace.createKeyspace();
   /// ```
   ///
-  Future<dynamic> createKeyspace() async {
+  Future<dynamic> createKeyspace({int? cache, bool? compression}) async {
     if (store == null || store!.isEmpty) {
       throw ArgumentError("Store name cannot be empty.");
     }
@@ -336,13 +292,10 @@ class KeyspacePersistent extends KV {
   /// await keyspace.updateCacheAndCompression();
   /// ```
   ///
-  Future<dynamic> updateCacheAndCompression() async {
-    if (!persistent) {
-      throw Exception(
-        "Cache and compression settings can only be updated for persistent keyspaces.",
-      );
-    }
-
+  Future<dynamic> updateCacheAndCompression({
+    int? cache,
+    bool? compression,
+  }) async {
     final queryMap = {
       "raw": [
         "update-cache-compression",
@@ -351,7 +304,7 @@ class KeyspacePersistent extends KV {
         "keyspace",
         keyspace,
         "cache",
-        cache ?? "0",
+        cache != null ? cache.toString() : "0",
         "compression",
         compression == true ? "y" : "n",
       ],

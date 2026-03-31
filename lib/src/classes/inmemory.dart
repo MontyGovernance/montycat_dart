@@ -187,9 +187,9 @@ class KeyspaceInMemory extends KV {
       throw ArgumentError("Please provide volumes/latest volume.");
     }
 
-    command = "get_keys";
     final query = convertToBinaryQuery(
       cls: this,
+      command: "get_keys",
       volumes: volumes,
       latestVolume: latestVolume,
     );
@@ -216,9 +216,9 @@ class KeyspaceInMemory extends KV {
       throw ArgumentError("No values provided for bulk insertion.");
     }
 
-    command = "insert_bulk";
     final query = convertToBinaryQuery(
       cls: this,
+      command: "insert_bulk",
       bulkValues: bulkValues,
       expireSec: expireSec,
     );
@@ -258,9 +258,9 @@ class KeyspaceInMemory extends KV {
       throw ArgumentError("No key provided");
     }
 
-    command = "update_value";
     final query = convertToBinaryQuery(
       cls: this,
+      command: "update_value",
       key: key,
       value: updates,
       expireSec: expireSec,
@@ -286,9 +286,9 @@ class KeyspaceInMemory extends KV {
       throw ArgumentError("No value provided for insertion.");
     }
 
-    command = "insert_value";
     final query = convertToBinaryQuery(
       cls: this,
+      command: "insert_value",
       value: value,
       expireSec: expireSec,
     );
@@ -322,9 +322,9 @@ class KeyspaceInMemory extends KV {
     }
 
     final customKeyConverted = convertCustomKey(customKey);
-    command = "insert_custom_key_value";
     final query = convertToBinaryQuery(
       cls: this,
+      command: "insert_custom_key_value",
       key: customKeyConverted,
       value: value,
       expireSec: expireSec,
@@ -352,9 +352,9 @@ class KeyspaceInMemory extends KV {
     }
 
     final customKeyConverted = convertCustomKey(customKey);
-    command = "insert_custom_key";
     final query = convertToBinaryQuery(
       cls: this,
+      command: "insert_custom_key",
       key: customKeyConverted,
       expireSec: expireSec,
     );
