@@ -2,7 +2,7 @@
 
 [![pub package](https://img.shields.io/pub/v/montycat.svg)](https://pub.dev/packages/montycat)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Changelog](https://img.shields.io/badge/changelog-1.0.6-blue.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/changelog-1.0.9-blue.svg)](CHANGELOG.md)
 [![GitHub](https://img.shields.io/badge/github-@montycat-blue.svg)](https://github.com/MontyGovernance/montycat_dart)
 
 ## Say goodbye to slow, bloated, legacy databases. Say hello to Montycat — the Rust-powered, high-performance, real-time Data Mesh database that feels native to Dart & Flutter.
@@ -33,7 +33,7 @@ Add `montycat_dart` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat_dart: ^1.0.4
+  montycat_dart: ^1.0.9
 ```
 
 Then fetch packages:

@@ -28,3 +28,10 @@
 ## 1.0.8
 - Fixed bulk write
 - Fixed bulk read
+
+## 1.0.9
+- Stateless query refactor: removed shared `command` and `limitOutput` mutable fields from `KV` base class; both are now passed as explicit local parameters to `convertToBinaryQuery`, eliminating state-related bugs in concurrent usage.
+- `subscribe` API unified: moved from `KeyspacePersistent`-only into the `KV` base class, making it available on both keyspace types. Added `subscriptionPort` parameter to override the default port. Added validation to reject providing both `key` and `customKey` simultaneously.
+- `listAllDependingKeys`: added validation to reject providing both `key` and `customKey` simultaneously.
+- `get_value`: removed mutual-exclusivity restriction between `withPointers` and `pointersMetadata` — both can now be used together.
+- `createKeyspace` / `updateCacheAndCompression`: `cache` and `compression` moved from class-level fields to method parameters; `updateCacheAndCompression` no longer throws when called on a non-persistent keyspace.
