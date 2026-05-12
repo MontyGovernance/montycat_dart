@@ -16,9 +16,6 @@ import '../functions/generic.dart'
 /// and CRUD-like operations (single, bulk, lookup).
 ///
 abstract class KV {
-  /// The last executed command (e.g. "get_value", "update_bulk").
-  String command = "";
-
   /// Store name (database/store identifier).
   String? store;
 
@@ -36,9 +33,6 @@ abstract class KV {
 
   /// Whether to use TLS for the connection.
   bool useTls = false;
-
-  /// Serialized representation of query limits (`start`, `stop`).
-  Map<String, int> limitOutput = {};
 
   /// Logical partition inside the store.
   String get keyspace;
@@ -245,9 +239,9 @@ abstract class KV {
 
   /// Retrieves a single value by [key] or [customKey].
   /// Optionally fetches associated pointers.
-  /// - [withPointers]: If true, includes pointer values.
+  /// - [withPointers]: If true, includes resolved pointer values.
   /// - [keyIncluded]: If true, includes the key in the response.
-  /// - [pointersMetadata]: If true, includes pointer metadata instead of values.
+  /// - [pointersMetadata]: If true, injects pointer metadata (__keyspace__, __key__) into each pointer field.
   /// Throws an [ArgumentError] if no valid key is provided.
   ///
   /// Example:
@@ -266,12 +260,6 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-    if (pointersMetadata && withPointers) {
-      throw ArgumentError(
-        "You select both pointers value and pointers metadata. Choose one.",
-      );
-    }
-
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -280,10 +268,9 @@ abstract class KV {
       throw Exception('No key provided');
     }
 
-    command = 'get_value';
-
     final query = convertToBinaryQuery(
       cls: this,
+      command: 'get_value',
       key: key,
       withPointers: withPointers,
       keyIncluded: keyIncluded,
@@ -315,9 +302,11 @@ abstract class KV {
       throw ArgumentError("No key provided");
     }
 
-    command = "delete_key";
-
-    Uint8List query = convertToBinaryQuery(cls: this, key: key);
+    Uint8List query = convertToBinaryQuery(
+      cls: this,
+      command: "delete_key",
+      key: key,
+    );
 
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -346,9 +335,11 @@ abstract class KV {
       throw ArgumentError("No keys provided for deletion.");
     }
 
-    command = "delete_bulk";
-
-    final query = convertToBinaryQuery(cls: this, bulkKeys: bulkKeys);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "delete_bulk",
+      bulkKeys: bulkKeys,
+    );
 
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -401,6 +392,7 @@ abstract class KV {
       );
     }
 
+    Map<String, int> limitOutput = {};
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
@@ -409,10 +401,10 @@ abstract class KV {
       );
     }
 
-    command = "get_bulk";
-
     final query = convertToBinaryQuery(
       cls: this,
+      command: "get_bulk",
+      limitOutput: limitOutput,
       bulkKeys: bulkKeys,
       withPointers: withPointers,
       keyIncluded: keyIncluded,
@@ -457,8 +449,11 @@ abstract class KV {
       final converted = convertCustomKeysValues(bulkCustomKeysValues);
       finalMap.addAll(converted);
     }
-    command = "update_bulk";
-    final query = convertToBinaryQuery(cls: this, bulkKeysValues: finalMap);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "update_bulk",
+      bulkKeysValues: finalMap,
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -484,8 +479,7 @@ abstract class KV {
     String? schema,
     Map<String, dynamic> searchCriteria = const {},
   }) async {
-    command = "lookup_keys";
-
+    Map<String, int> limitOutput = {};
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
@@ -496,6 +490,8 @@ abstract class KV {
 
     final query = convertToBinaryQuery(
       cls: this,
+      command: "lookup_keys",
+      limitOutput: limitOutput,
       searchCriteria: searchCriteria,
       schema: schema,
     );
@@ -530,8 +526,7 @@ abstract class KV {
     bool keyIncluded = false,
     bool pointersMetadata = false,
   }) async {
-    command = "lookup_values";
-
+    Map<String, int> limitOutput = {};
     if (limit.length == 2) {
       limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
     } else if (limit.isNotEmpty && limit.length != 2) {
@@ -542,6 +537,8 @@ abstract class KV {
 
     final query = convertToBinaryQuery(
       cls: this,
+      command: "lookup_values",
+      limitOutput: limitOutput,
       searchCriteria: searchCriteria,
       withPointers: withPointers,
       schema: schema,
@@ -563,6 +560,10 @@ abstract class KV {
   /// ```
   ///
   Future<dynamic> listAllDependingKeys({String? key, String? customKey}) async {
+    if (key != null && customKey != null) {
+      throw ArgumentError("Provide either 'key' or 'customKey', not both.");
+    }
+
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
     }
@@ -571,9 +572,11 @@ abstract class KV {
       throw ArgumentError("No key provided");
     }
 
-    command = "list_all_depending_keys";
-
-    final query = convertToBinaryQuery(key: key, cls: this);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "list_all_depending_keys",
+      key: key,
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -586,8 +589,7 @@ abstract class KV {
   /// ```
   ///
   Future<dynamic> getLen() async {
-    command = "get_len";
-    final query = convertToBinaryQuery(cls: this);
+    final query = convertToBinaryQuery(cls: this, command: "get_len");
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -599,8 +601,10 @@ abstract class KV {
   /// ```
   ///
   Future<dynamic> listAllSchemasInKeyspace() async {
-    command = "list_all_schemas_in_keyspace";
-    final query = convertToBinaryQuery(cls: this);
+    final query = convertToBinaryQuery(
+      cls: this,
+      command: "list_all_schemas_in_keyspace",
+    );
     return await runQuery(host, port, query, useTls: useTls);
   }
 
@@ -628,6 +632,61 @@ abstract class KV {
 
     final queryBytes = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
     return await runQuery(host, port, queryBytes, useTls: useTls);
+  }
+
+  /// Subscribes to changes in the keyspace.
+  ///
+  /// - [key]: Specific key to monitor.
+  /// - [customKey]: Custom key to monitor (converted internally).
+  /// - [subscriptionPort]: Optional port override (defaults to [port] + 1).
+  /// - [callback]: Function called when data is received.
+  ///
+  /// Throws [ArgumentError] if both [key] and [customKey] are provided.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// await keyspace.subscribe(
+  ///   key: 'my_key',
+  ///   callback: (data) => print('Update: $data'),
+  /// );
+  /// ```
+  ///
+  Future<dynamic> subscribe({
+    String? key,
+    String? customKey,
+    int? subscriptionPort,
+    void Function(dynamic)? callback,
+  }) async {
+    if (key != null && customKey != null) {
+      throw ArgumentError("Provide either 'key' or 'customKey', not both.");
+    }
+
+    if (customKey != null && customKey.isNotEmpty) {
+      key = convertCustomKey(customKey);
+    }
+
+    final usePort = subscriptionPort ?? (port + 1);
+
+    final queryObj = {
+      "subscribe": true,
+      "store": store,
+      "keyspace": keyspace,
+      "username": username,
+      "password": password,
+      "persistent": persistent,
+      "key": key,
+    };
+
+    final query = Uint8List.fromList(utf8.encode(jsonEncode(queryObj)));
+
+    return await runQuery(
+      host,
+      usePort,
+      query,
+      callback: callback,
+      useTls: useTls,
+    );
   }
 
   /// Prints the current connection and keyspace properties.
