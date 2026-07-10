@@ -1,11 +1,11 @@
-# 🚀 Montycat Dart Client — High-Performance NoSQL for Dart & Flutter
+# 🚀 Montycat Dart Client — the self-hosted NoSQL + vector database with built-in AI semantic search for RAG & AI agents (Dart & Flutter), powered by Rust
 
 [![pub package](https://img.shields.io/pub/v/montycat.svg)](https://pub.dev/packages/montycat)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/changelog-1.0.9-blue.svg)](CHANGELOG.md)
 [![GitHub](https://img.shields.io/badge/github-@montycat-blue.svg)](https://github.com/MontyGovernance/montycat_dart)
 
-## Say goodbye to slow, bloated, legacy databases. Say hello to Montycat — the Rust-powered, high-performance, real-time Data Mesh database that feels native to Dart & Flutter.
+## Say goodbye to slow, bloated, legacy databases — and to bolting a separate vector DB onto your stack. Say hello to Montycat: the self-hosted, Rust-powered **NoSQL + vector database** with built-in semantic search — **RAG & AI-agent memory** that feels native to Dart & Flutter. No cloud lock-in, no ops headache.
 
 ## 🌐 Montycat Highlights
 
@@ -48,7 +48,7 @@ flutter pub get
 
 ```dart
 import 'dart:async';
-import 'package:montycat/source.dart'
+import 'package:montycat/montycat.dart'
     show
         Engine,
         KeyspaceInMemory,
@@ -169,7 +169,52 @@ Future<void> main() async {
 }
 ```
 
+## 🧠 AI-Native Semantic Search — Vector Search Built Into Your Database
+
+**Stop bolting a separate vector database onto your stack.** Montycat ranks your data by
+*meaning*, not keywords — an embedded, on-device vector-embedding engine turns every write
+into a searchable vector automatically. It's the retrieval layer for **RAG pipelines, AI
+agents, semantic search, recommendation engines, and LLM-powered apps** — with **zero
+external APIs, zero API keys, and zero extra infrastructure.**
+
+- 🔎 **Semantic / vector search** — kNN similarity over on-device embeddings, not brittle keyword matches.
+- 🤖 **Built for AI** — RAG, semantic retrieval, AI agents, recommendations, dedup, clustering.
+- 🔒 **Private & free** — embeddings never leave your machine. No OpenAI/Cohere bill, no data egress.
+- ⚡ **One system, not two** — your data *and* its vectors live in the same database. No sync jobs, no drift, no second service to run.
+- 🚀 **Zero setup** — no index tuning, no pipeline: `enableSemanticSearch()` and you're ranking by meaning.
+
+> **⚠️ Requires the semantic edition of the server — nothing to compile.** Semantic
+> search runs an embedded ONNX vector-embedding engine that ships only in the
+> **`montycat-semantic`** edition; the default lean `montycat` server does not include it.
+> Get it the way that suits you — pull the `montycat-semantic` **Docker image**, download
+> the prebuilt **package**, or install from the **apt repository**. The Dart client API
+> is identical either way; just point it at a `montycat-semantic` server (semantic search
+> is enabled by default there, using the `bge-small` model).
+
+Enable it once, DB-wide, on the engine; every keyspace is embedded in the background as
+data is written (the embedding model is downloaded on first enable).
+
+```dart
+// Turn semantic search on for the whole database (model downloaded on first use).
+// model: 'minilm' | 'bge-small' (default) | 'bge-base' | 'e5-small'
+await engine.enableSemanticSearch();
+
+// Rank stored items by meaning — two flavors:
+//   getValues → each hit is {key, score, value}
+//   getKeys   → each hit is {key, score} (lighter; fetch a page later with getBulk)
+await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
+await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5]);
+
+// Optionally drop weak matches by cosine similarity (range [-1, 1]).
+await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5], minScore: 0.35);
+
+// Turn it off (vectors are kept so re-enabling resumes instantly;
+// pass dropVectors: true to also clear stored vectors).
+await engine.disableSemanticSearch();
+```
+
 ## ⚡ Features in Action
+- 🧠 AI Semantic & Vector Search: rank items by meaning with on-device embeddings — kNN vector search for **RAG, AI agents & LLM apps**, no external API.
 - Async by Default: Full async/await support for all operations.
 - Can be used as a cache option for Flutter apps
 - Real-Time: Subscribe to keyspace events or key changes.

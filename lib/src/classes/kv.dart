@@ -289,7 +289,7 @@ abstract class KV {
   /// await keyspace.deleteKey(key: 'some_key');
   /// ```
   ///
-  Future<dynamic> deleteKey({String? key, String? customKey}) async {
+  Future<dynamic> deleteKey({String? key, String? customKey, bool? waitForIndex}) async {
     if (key != null && customKey != null) {
       throw ArgumentError("Provide either 'key' or 'customKey', not both.");
     }
@@ -306,6 +306,7 @@ abstract class KV {
       cls: this,
       command: "delete_key",
       key: key,
+      waitForIndex: waitForIndex,
     );
 
     return await runQuery(host, port, query, useTls: useTls);
@@ -325,6 +326,7 @@ abstract class KV {
   Future<dynamic> deleteBulk({
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
+    bool? waitForIndex,
   }) async {
     if (bulkCustomKeys.isNotEmpty) {
       List<String> bulkCustomKeysConverted = convertCustomKeys(bulkCustomKeys);
@@ -339,6 +341,7 @@ abstract class KV {
       cls: this,
       command: "delete_bulk",
       bulkKeys: bulkKeys,
+      waitForIndex: waitForIndex,
     );
 
     return await runQuery(host, port, query, useTls: useTls);
@@ -438,6 +441,7 @@ abstract class KV {
   Future<dynamic> updateBulk({
     Map<String, dynamic> bulkKeysValues = const {},
     Map<String, dynamic> bulkCustomKeysValues = const {},
+    bool? waitForIndex,
   }) async {
     if (bulkKeysValues.isEmpty && bulkCustomKeysValues.isEmpty) {
       throw ArgumentError("No key-value pairs provided for update.");
@@ -453,6 +457,7 @@ abstract class KV {
       cls: this,
       command: "update_bulk",
       bulkKeysValues: finalMap,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -547,6 +552,121 @@ abstract class KV {
     );
 
     return await runQuery(host, port, query, useTls: useTls);
+  }
+
+  /// Shared core for [semanticSearchGetKeys] / [semanticSearchGetValues].
+  ///
+  /// The server command is the same either way (`semantic_search`); the two
+  /// public methods differ only in which value-inclusion flags they pass, so
+  /// the wire call lives here once.
+  ///
+  Future<dynamic> _semanticSearchCore(
+    String query,
+    List<int> limit,
+    double? minScore,
+    bool withPointers,
+    bool keyIncluded,
+    bool pointersMetadata,
+  ) async {
+    if (query.trim().isEmpty) {
+      throw ArgumentError("No query text provided for semantic search.");
+    }
+
+    Map<String, int> limitOutput = {};
+    if (limit.length == 2) {
+      limitOutput = Limit(start: limit[0], stop: limit[1]).serialize();
+    } else if (limit.isNotEmpty && limit.length != 2) {
+      throw ArgumentError(
+        "Limit must be a list of two integers [start, stop].",
+      );
+    }
+
+    final binaryQuery = convertToBinaryQuery(
+      cls: this,
+      command: "semantic_search",
+      semanticQuery: query,
+      limitOutput: limitOutput,
+      minScore: minScore,
+      withPointers: withPointers,
+      keyIncluded: keyIncluded,
+      pointersMetadata: pointersMetadata,
+    );
+
+    return await runQuery(host, port, binaryQuery, useTls: useTls);
+  }
+
+  /// Semantic (vector similarity) search returning ranked keys only.
+  ///
+  /// Ranks stored items by how close their embeddings are to the embedding of
+  /// [query] and returns just the matched key and score for each hit — the
+  /// lightweight variant when you only need identity + ranking (e.g. to then
+  /// [getBulk] a page, or to test membership). Use [semanticSearchGetValues]
+  /// when you want the values inline.
+  ///
+  /// Semantic search must be enabled first (see [Engine.enableSemanticSearch]).
+  /// The keyspace is embedded in the background as items are written, so results
+  /// reflect whatever has been embedded so far.
+  ///
+  /// - [query]: The natural-language query text to embed and search for.
+  /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
+  ///   apply its default top-k (10).
+  /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
+  ///   value; null applies no score filter.
+  ///
+  /// Each hit is `{"key": ..., "score": ...}`.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final res = await keyspace.semanticSearchGetKeys(
+  ///   'astronomy and outer space',
+  ///   limit: [0, 3],
+  /// );
+  /// ```
+  ///
+  Future<dynamic> semanticSearchGetKeys(
+    String query, {
+    List<int> limit = const [],
+    double? minScore,
+  }) async {
+    return await _semanticSearchCore(query, limit, minScore, false, false, false);
+  }
+
+  /// Semantic (vector similarity) search returning ranked hits with their values.
+  ///
+  /// Ranks stored items by how close their embeddings are to the embedding of
+  /// [query] and returns the value inline with each hit — the key is always
+  /// included so every value is tagged with its key. Use [semanticSearchGetKeys]
+  /// when you only need keys + scores.
+  ///
+  /// Semantic search must be enabled first (see [Engine.enableSemanticSearch]).
+  /// The keyspace is embedded in the background as items are written, so results
+  /// reflect whatever has been embedded so far.
+  ///
+  /// - [query]: The natural-language query text to embed and search for.
+  /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
+  ///   apply its default top-k (10).
+  /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
+  ///   value; null applies no score filter.
+  /// - [withPointers]: Whether to include pointers (foreign values) in each value.
+  /// - [pointersMetadata]: Whether to include pointer metadata in each value.
+  ///
+  /// Each hit is `{"key": ..., "score": ..., "value": ...}`.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final res = await keyspace.semanticSearchGetValues('recipes for dinner');
+  /// ```
+  ///
+  Future<dynamic> semanticSearchGetValues(
+    String query, {
+    List<int> limit = const [],
+    double? minScore,
+    bool withPointers = false,
+    bool pointersMetadata = false,
+  }) async {
+    return await _semanticSearchCore(query, limit, minScore, withPointers, true, pointersMetadata);
   }
 
   /// Lists all keys that depend on the given key.

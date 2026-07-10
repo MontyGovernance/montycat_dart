@@ -89,6 +89,9 @@ Uint8List convertToBinaryQuery({
   bool latestVolume = false,
   bool keyIncluded = false,
   bool pointersMetadata = false,
+  String? semanticQuery,
+  double? minScore,
+  bool? waitForIndex,
 }) {
   searchCriteria = searchCriteria ?? {};
   value = value ?? {};
@@ -154,13 +157,27 @@ Uint8List convertToBinaryQuery({
       for (var entry in bulkKeysValues.entries)
         entry.key: jsonEncode(entry.value),
     },
-    'search_criteria': jsonEncode(searchCriteria),
+    // `semantic_search` sends the raw query text (the engine trims it as a
+    // plain string); every other command sends a JSON-encoded filter map.
+    'search_criteria': semanticQuery ?? jsonEncode(searchCriteria),
     'with_pointers': withPointers,
     'volumes': volumes ?? [],
     'latest_volume': latestVolume,
     'key_included': keyIncluded,
     'pointers_metadata': pointersMetadata,
   };
+
+  // Only `semantic_search` honors min_score; omit it otherwise so the wire is
+  // unchanged for existing commands (the server defaults the field to null).
+  if (minScore != null) {
+    queryDict['min_score'] = minScore;
+  }
+
+  // Per-request wait_for_index override for persistent writes; omit when null
+  // so the server falls back to its DB-wide default (existing wire unchanged).
+  if (waitForIndex != null) {
+    queryDict['wait_for_index'] = waitForIndex;
+  }
 
   return Uint8List.fromList(jsonEncode(queryDict).codeUnits);
 }

@@ -211,6 +211,7 @@ class KeyspaceInMemory extends KV {
   Future<dynamic> insertBulk({
     required List bulkValues,
     int expireSec = 0,
+    bool? waitForIndex,
   }) async {
     if (bulkValues.isEmpty) {
       throw ArgumentError("No values provided for bulk insertion.");
@@ -221,6 +222,7 @@ class KeyspaceInMemory extends KV {
       command: "insert_bulk",
       bulkValues: bulkValues,
       expireSec: expireSec,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -246,6 +248,7 @@ class KeyspaceInMemory extends KV {
     String? customKey,
     int expireSec = 0,
     Map<String, dynamic>? updates,
+    bool? waitForIndex,
   }) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
@@ -264,6 +267,7 @@ class KeyspaceInMemory extends KV {
       key: key,
       value: updates,
       expireSec: expireSec,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -281,6 +285,7 @@ class KeyspaceInMemory extends KV {
   Future<dynamic> insertValue({
     required dynamic value,
     int expireSec = 0,
+    bool? waitForIndex,
   }) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
@@ -291,6 +296,7 @@ class KeyspaceInMemory extends KV {
       command: "insert_value",
       value: value,
       expireSec: expireSec,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -313,6 +319,7 @@ class KeyspaceInMemory extends KV {
     required String customKey,
     required dynamic value,
     int expireSec = 0,
+    bool? waitForIndex,
   }) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
@@ -328,6 +335,7 @@ class KeyspaceInMemory extends KV {
       key: customKeyConverted,
       value: value,
       expireSec: expireSec,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -346,6 +354,7 @@ class KeyspaceInMemory extends KV {
   Future<dynamic> insertCustomKey({
     required String customKey,
     int expireSec = 0,
+    bool? waitForIndex,
   }) async {
     if (customKey.isEmpty) {
       throw ArgumentError("No custom key provided for insertion.");
@@ -357,6 +366,7 @@ class KeyspaceInMemory extends KV {
       command: "insert_custom_key",
       key: customKeyConverted,
       expireSec: expireSec,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
