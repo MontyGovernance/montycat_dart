@@ -219,4 +219,131 @@ class Engine {
     final storePart = store != null ? ["store", store!] : [];
     return await _executeQuery(["get-structure-available", ...storePart]);
   }
+
+  /// Enables semantic (vector similarity) search.
+  ///
+  /// Without [store], this is DB-wide: it flips the whole database on, sets the
+  /// default embedding model and field, and enrolls every existing keyspace that
+  /// has no semantic config yet (each gets a background backfill so its existing
+  /// items become searchable). The chosen model is downloaded on demand on first
+  /// enable, so this call may take a while the first time.
+  ///
+  /// With [store], it is scoped: only that store's un-enrolled keyspaces are
+  /// enrolled and backfilled; the DB-wide switch and default model/field are left
+  /// untouched. Use this to (re-)enable one store without re-embedding the entire
+  /// database.
+  ///
+  /// - [model]: The embedding model key to use by default. One of 'minilm',
+  ///   'bge-small', 'bge-base', 'e5-small'. Null uses the server default
+  ///   ('bge-small').
+  /// - [field]: The JSON field of each value to embed. Null embeds the whole value.
+  /// - [store]: Restrict enrollment/backfill to this store only. If the DB-wide
+  ///   switch is off, a scoped enable enrolls but nothing embeds until a DB-wide
+  ///   enable.
+  ///
+  Future<dynamic> enableSemanticSearch({
+    String? model,
+    String? field,
+    String? store,
+  }) async {
+    final List<dynamic> command = ["enable-semantic-search"];
+    if (model != null) command.addAll(["model", model]);
+    if (field != null) command.addAll(["field", field]);
+    if (store != null) command.addAll(["store", store]);
+    return await _executeQuery(command);
+  }
+
+  /// Disables semantic search.
+  ///
+  /// Without [store], this is DB-wide: embedding and semantic queries stop across
+  /// the whole database; stored vectors are kept by default so re-enabling
+  /// resumes without a full re-embed.
+  ///
+  /// With [store], it is scoped: only that store's keyspaces are unenrolled
+  /// (their configs and resident graphs dropped); the DB-wide switch and all
+  /// other stores are left untouched. This is the surgical way to reset one
+  /// store's semantic state instead of nuking and re-backfilling the whole
+  /// database.
+  ///
+  /// - [dropVectors]: If true, also clear stored vectors — every keyspace's
+  ///   DB-wide, or the scoped store's when [store] is set. Required before
+  ///   switching to a different embedding model.
+  /// - [store]: Restrict the disable to this store only. Null disables DB-wide.
+  ///
+  Future<dynamic> disableSemanticSearch({
+    bool dropVectors = false,
+    String? store,
+  }) async {
+    final List<dynamic> command = ["disable-semantic-search"];
+    if (dropVectors) command.add("drop-vectors");
+    if (store != null) command.addAll(["store", store]);
+    return await _executeQuery(command);
+  }
+
+  /// Enables the DB-wide "wait for index" default.
+  ///
+  /// Writes block until their secondary indexes are updated before returning,
+  /// so a write is immediately visible to index-backed reads (e.g.
+  /// [KV.lookupValuesWhere]) at the cost of higher write latency. Requires
+  /// superowner credentials.
+  ///
+  Future<dynamic> enableWaitForIndex() async {
+    return await _executeQuery(["enable-wait-for-index"]);
+  }
+
+  /// Disables the DB-wide "wait for index" default.
+  ///
+  /// Writes return as soon as the data is committed and indexing happens
+  /// asynchronously in the background (lower write latency; index-backed reads
+  /// may briefly lag). This is the default behavior. Requires superowner
+  /// credentials.
+  ///
+  Future<dynamic> disableWaitForIndex() async {
+    return await _executeQuery(["disable-wait-for-index"]);
+  }
+
+  /// Enable server-side operation reporting (logging). Requires superowner credentials.
+  Future<dynamic> enableReports() async {
+    return await _executeQuery(["enable-reports"]);
+  }
+
+  /// Disable server-side operation reporting (logging). Requires superowner credentials.
+  Future<dynamic> disableReports() async {
+    return await _executeQuery(["disable-reports"]);
+  }
+
+  /// Allow clients to open keyspace subscriptions DB-wide. Requires superowner credentials.
+  Future<dynamic> allowSubscriptions() async {
+    return await _executeQuery(["allow-subscriptions"]);
+  }
+
+  /// Restrict (disallow) keyspace subscriptions DB-wide. Requires superowner credentials.
+  Future<dynamic> restrictSubscriptions() async {
+    return await _executeQuery(["restrict-subscriptions"]);
+  }
+
+  /// Sample the current depth of every background task queue (index, timer,
+  /// counting) — an observability probe for whether the background runners are
+  /// keeping up with the write rate. Requires superowner credentials.
+  ///
+  /// The response payload maps `"index" | "timer" | "counting"` to per-queue
+  /// depth maps.
+  Future<dynamic> queueDepths() async {
+    return await _executeQuery(["queue-depths"]);
+  }
+
+  /// Set the server-wide snapshot rate. Requires superowner credentials.
+  ///
+  /// - [rate]: the snapshot rate value (server-defined units).
+  Future<dynamic> setSnapshotRate(int rate) async {
+    return await _executeQuery(["snapshot-rate", rate.toString()]);
+  }
+
+  /// Set how often the server scans for expired keys. Requires superowner credentials.
+  ///
+  /// - [rate]: number of 15-minute intervals between expiration scans; multiplied
+  ///   by 900 seconds server-side (e.g. `rate = 4` → a scan every 60 minutes).
+  Future<dynamic> setExpirationCheckRate(int rate) async {
+    return await _executeQuery(["expiration-check", rate.toString()]);
+  }
 }

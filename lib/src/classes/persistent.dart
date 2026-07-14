@@ -65,7 +65,7 @@ class KeyspacePersistent extends KV {
   /// await keyspace.insertCustomKey(customKey: 'my_custom_key');
   /// ```
   ///
-  Future<dynamic> insertCustomKey({required String customKey}) async {
+  Future<dynamic> insertCustomKey({required String customKey, bool? waitForIndex}) async {
     if (customKey.isEmpty) {
       throw ArgumentError("No custom key provided for insertion.");
     }
@@ -75,6 +75,7 @@ class KeyspacePersistent extends KV {
       cls: this,
       command: "insert_custom_key",
       key: customKeyConverted,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -91,6 +92,7 @@ class KeyspacePersistent extends KV {
   Future<dynamic> insertCustomKeyValue({
     required String customKey,
     required dynamic value,
+    bool? waitForIndex,
   }) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
@@ -105,6 +107,7 @@ class KeyspacePersistent extends KV {
       command: "insert_custom_key_value",
       key: customKeyConverted,
       value: value,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -118,7 +121,7 @@ class KeyspacePersistent extends KV {
   /// await keyspace.insertValue(value: 'my_value');
   /// ```
   ///
-  Future<dynamic> insertValue({required dynamic value}) async {
+  Future<dynamic> insertValue({required dynamic value, bool? waitForIndex}) async {
     if (value.isEmpty) {
       throw ArgumentError("No value provided for insertion.");
     }
@@ -127,6 +130,7 @@ class KeyspacePersistent extends KV {
       cls: this,
       command: "insert_value",
       value: value,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -149,6 +153,7 @@ class KeyspacePersistent extends KV {
     String? key,
     String? customKey,
     Map<String, dynamic>? updates,
+    bool? waitForIndex,
   }) async {
     if (customKey != null && customKey.isNotEmpty) {
       key = convertCustomKey(customKey);
@@ -166,6 +171,7 @@ class KeyspacePersistent extends KV {
       command: "update_value",
       key: key,
       value: updates,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }
@@ -231,7 +237,7 @@ class KeyspacePersistent extends KV {
   /// );
   /// ```
   ///
-  Future<dynamic> insertBulk({required List bulkValues}) async {
+  Future<dynamic> insertBulk({required List bulkValues, bool? waitForIndex}) async {
     if (bulkValues.isEmpty) {
       throw ArgumentError("No values provided for bulk insertion.");
     }
@@ -240,6 +246,7 @@ class KeyspacePersistent extends KV {
       cls: this,
       command: "insert_bulk",
       bulkValues: bulkValues,
+      waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
   }

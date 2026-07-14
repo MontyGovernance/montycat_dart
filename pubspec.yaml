@@ -1,6 +1,6 @@
 name: montycat
 description: >
-  Montycat Dart client: High-performance NoSQL client for Dart and Flutter with async operations, real-time subscriptions, in-memory and persistent storage.
+  Montycat Dart client: the self-hosted NoSQL + vector database for Dart and Flutter with built-in AI semantic search for RAG & AI agents, async operations, real-time subscriptions, in-memory and persistent storage.
 version: 1.0.9
 environment:
   sdk: ">=3.7.2 <4.0.0"
@@ -13,11 +13,11 @@ dev_dependencies:
   test: ^1.24.0
 
 topics:
-  - database
+  - vector-database
+  - semantic-search
+  - rag
+  - embeddings
   - nosql
-  - data-mesh
-  - cache
-  - realtime
 
 license: MIT
 homepage: https://montygovernance.com
