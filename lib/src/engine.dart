@@ -332,6 +332,19 @@ class Engine {
     return await _executeQuery(["queue-depths"]);
   }
 
+  /// Fetch the current DB-wide node settings so UIs can show live state instead
+  /// of blind Enable/Disable toggles. Requires superowner credentials. Read-only
+  /// mirror of the individual setters ([enableReports], [enableWaitForIndex],
+  /// [allowSubscriptions], [setSnapshotRate], [setExpirationCheckRate]).
+  ///
+  /// The response payload is a JSON object:
+  /// `{ reports, wait_for_index, subscriptions, snapshot_rate, expiration_check_rate }`.
+  /// `expiration_check_rate` is the user-facing rate (the same units you pass to
+  /// [setExpirationCheckRate]); it is stored ×900 seconds server-side.
+  Future<dynamic> nodeInfo() async {
+    return await _executeQuery(["node-info"]);
+  }
+
   /// Set the server-wide snapshot rate. Requires superowner credentials.
   ///
   /// - [rate]: the snapshot rate value (server-defined units).
