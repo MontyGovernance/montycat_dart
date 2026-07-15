@@ -120,6 +120,20 @@ abstract class Schema {
             "Attribute '$attribute' should be one of $expectedType, got ${actualValue.runtimeType}",
           );
         }
+      } else if (expectedType.type == Map) {
+        // `json.decode` yields `_Map<String, dynamic>`, whose runtimeType is not
+        // equal to the `Map` Type literal on the VM; use an `is` check instead.
+        if (actualValue != null && actualValue is! Map) {
+          throw ArgumentError(
+            "Attribute '$attribute' should be $expectedType, got ${actualValue.runtimeType}",
+          );
+        }
+      } else if (expectedType.type == List) {
+        if (actualValue != null && actualValue is! List) {
+          throw ArgumentError(
+            "Attribute '$attribute' should be $expectedType, got ${actualValue.runtimeType}",
+          );
+        }
       } else {
         if (actualValue != null &&
             actualValue.runtimeType != expectedType.type) {
