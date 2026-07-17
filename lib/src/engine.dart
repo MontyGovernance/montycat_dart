@@ -339,8 +339,8 @@ class Engine {
   ///
   /// The response payload is a JSON object:
   /// `{ reports, wait_for_index, subscriptions, snapshot_rate, expiration_check_rate }`.
-  /// `expiration_check_rate` is the user-facing rate (the same units you pass to
-  /// [setExpirationCheckRate]); it is stored ×900 seconds server-side.
+  /// `expiration_check_rate` is the check period in whole seconds — the same value
+  /// you pass to [setExpirationCheckRate] (stored as-is, like the snapshot rate).
   Future<dynamic> nodeInfo() async {
     return await _executeQuery(["node-info"]);
   }
@@ -354,8 +354,8 @@ class Engine {
 
   /// Set how often the server scans for expired keys. Requires superowner credentials.
   ///
-  /// - [rate]: number of 15-minute intervals between expiration scans; multiplied
-  ///   by 900 seconds server-side (e.g. `rate = 4` → a scan every 60 minutes).
+  /// - [rate]: the check period in whole seconds (e.g. `rate = 10` → a scan every
+  ///   10 seconds). Stored as-is, like the snapshot rate. Defaults to 1 second.
   Future<dynamic> setExpirationCheckRate(int rate) async {
     return await _executeQuery(["expiration-check", rate.toString()]);
   }
