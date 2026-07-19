@@ -35,3 +35,9 @@
 - `listAllDependingKeys`: added validation to reject providing both `key` and `customKey` simultaneously.
 - `get_value`: removed mutual-exclusivity restriction between `withPointers` and `pointersMetadata` — both can now be used together.
 - `createKeyspace` / `updateCacheAndCompression`: `cache` and `compression` moved from class-level fields to method parameters; `updateCacheAndCompression` no longer throws when called on a non-persistent keyspace.
+
+## 1.0.10
+- Added AI semantic (vector) search support for the Montycat **Semantic** server edition:
+  - `enableSemanticSearch({model, field, store})` / `disableSemanticSearch({dropVectors, store})` — toggle semantic search DB-wide (or scoped to a single store) and choose the embedding model (`minilm`, `bge-small` (default), `bge-base`, `e5-small`).
+  - `semanticSearchGetValues(query, {limit, minScore})` — retrieve records ranked by meaning, each returned with its key, similarity score, and value.
+  - `semanticSearchGetKeys(query, {limit, minScore})` — lighter key-and-score results; use `minScore` to drop weak matches.

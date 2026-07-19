@@ -74,7 +74,7 @@ Add `montycat` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat: ^1.0.9
+  montycat: ^1.0.10
 ```
 
 Then fetch packages:
