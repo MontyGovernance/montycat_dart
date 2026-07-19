@@ -1,39 +1,80 @@
-# 🚀 Montycat Dart Client — the self-hosted NoSQL + vector database with built-in AI semantic search for RAG & AI agents (Dart & Flutter), powered by Rust
+# 💙 Montycat for Dart & Flutter — The AI-Native NoSQL Database with Semantic Search for RAG & Agents
+
+### Abolish the two-database stack.
+
+The official Dart & Flutter SDK for [Montycat](https://montygovernance.com) — a self-hosted **NoSQL + vector database** with AI **semantic search** forged into the core, built for **RAG and AI-agent memory**. One Rust engine, not a sprawl of services. **Your hardware. Your data. Your meaning.**
 
 [![pub package](https://img.shields.io/pub/v/montycat.svg)](https://pub.dev/packages/montycat)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Changelog](https://img.shields.io/badge/changelog-1.0.9-blue.svg)](CHANGELOG.md)
-[![GitHub](https://img.shields.io/badge/github-@montycat-blue.svg)](https://github.com/MontyGovernance/montycat_dart)
+[![pub points](https://img.shields.io/pub/points/montycat.svg)](https://pub.dev/packages/montycat/score)
+[![Docker Pulls](https://img.shields.io/docker/pulls/montygovernance/montycat)](https://hub.docker.com/r/montygovernance/montycat)
+[![platform](https://img.shields.io/badge/platform-Flutter%20%7C%20Dart-blue.svg)](https://pub.dev/packages/montycat)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/MontyGovernance/montycat_dart/blob/master/LICENSE)
 
-## Say goodbye to slow, bloated, legacy databases — and to bolting a separate vector DB onto your stack. Say hello to Montycat: the self-hosted, Rust-powered **NoSQL + vector database** with built-in semantic search — **RAG & AI-agent memory** that feels native to Dart & Flutter. No cloud lock-in, no ops headache.
+```dart
+// Search your data by MEANING — no external APIs, no separate vector database.
+// (already ON by default in the montycat-semantic server edition)
+final hits = await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
+// → [{key, score, value}, ...] ranked by semantic similarity
+```
 
-## 🌐 Montycat Highlights
+> ### 🧩 All-in-one. AI-native. **Zero external dependencies.**
+> The vector-embedding engine runs **inside** the database — **no** separate vector DB, **no** embedding API, **no** API keys, **no** sidecar service. One engine, one binary, your hardware.
 
-- Montycat is more than a database — it’s a living Data Mesh:
-- Hybrid Engine: Combine memory-speed in-memory operations with persistent durability.
-- Domain-Oriented Keyspaces: Each keyspace is an independently owned data product.
-- Reactive Core: Native subscriptions for live apps and analytics.
-- Rust-Powered: Memory-safe, zero-cost abstractions, ultra-low latency.
-- With Montycat, you’re not just storing data — you’re interacting with a structured, reactive, high-performance data mesh.
-- Montycat Dart client allows Dart & Flutter developers to interact with the Montycat NoSQL engine, a Rust-powered, ultra-fast, Data Mesh–native database. It combines real-time subscriptions, hybrid storage, and structured data support with a clean async API.
+## What is Montycat?
 
-## ✨ Why Montycat Dart?
+For a generation we were told the price of intelligence was two systems: a database for your records, and a separate vector store — with its per-query bill — for their meaning. Montycat rejects that tax. It is a **self-hosted NoSQL + vector database**: one Rust-powered engine with semantic search built in, so **RAG, AI-agent memory, and vector search** live where your data already lives. No cloud lock-in. No ops headache. Decentralized by nature, ultra-fast, and natively async.
 
-- ⚡ No More Waiting – Forget slow queries, bloated drivers, or ORM hell.
-- 🗂️ Domain-Oriented Data – Each keyspace is a mini product you control.
-- 📡 Live & Reactive – Dashboards, notifications, or analytics — real-time is effortless.
-- 🛡️ Safe & Future-Proof – Rust engine + TLS + memory-safe guarantees.
-- 🌐 Cross-Platform – Flutter mobile, web, desktop; server-side Dart; no hacks.
+Think of it as an **open-source, self-hosted alternative to Pinecone, Weaviate, Chroma, Qdrant, and Redis** — a **vector database _and_ a NoSQL store in a single engine** — that feels native to Dart & Flutter across mobile, web, desktop, and server-side Dart.
 
-## Learn more about Montycat Engine at https://montygovernance.com
+## 🌐 More Than a Database — a Living Data Mesh
+
+Montycat is not storage you query. It is a structured, reactive, high-performance data mesh you converse with — and every part of it belongs to you:
+
+- **Hybrid Engine** — memory-speed in-memory operations and persistent durability in one place.
+- **Domain-Oriented Keyspaces** — each keyspace is an independently owned data product, not a shared table.
+- **Reactive Core** — native subscriptions for live apps and analytics.
+- **Rust-Powered** — memory-safe, zero-cost abstractions, ultra-low latency.
+- **One Clean API** — real-time subscriptions, hybrid storage, and structured data behind a single async surface, built for Dart & Flutter.
+
+## ✨ Why Dart & Flutter Developers Defect to Montycat
+
+- ⚡ **No More Waiting** — forget slow queries, bloated drivers, and ORM hell.
+- 🗂️ **Domain-Oriented Data** — each keyspace is a product you own and control.
+- 📡 **Live & Reactive** — dashboards, notifications, analytics: real-time is effortless.
+- 🛡️ **Safe & Future-Proof** — a Rust engine, TLS, and memory-safe guarantees.
+- 🌐 **Cross-Platform** — Flutter mobile, web, desktop, and server-side Dart. No hacks.
+
+## 🔍 Example Use Cases
+
+- **RAG pipelines & semantic retrieval** for LLM-powered Dart/Flutter apps
+- **On-device AI agent / chatbot memory** that survives restarts
+- **Semantic search & recommendations** — match intent, not keywords
+- Real-time dashboards, notifications, and live collaborative apps
+- Offline-first Flutter cache backed by a real engine
+- Data products in a decentralized Mesh architecture
+
+## 🚀 Get the Engine (30 seconds)
+
+The client talks to a Montycat server. Fastest way — Docker, with AI semantic search built in:
+
+```bash
+docker run -d --name montycat \
+  -p 21210:21210 -p 21211:21211 \
+  -e MONTYCAT_SUPEROWNER="admin" \
+  -e MONTYCAT_PASSWORD="change-me" \
+  -v montycat_data:/app/.montycat \
+  montygovernance/montycat:semantic
+```
+
+Prefer the lean edition without the embedding engine? Use the `latest` tag. Prebuilt packages (apt, macOS, Windows) at **https://montygovernance.com**.
 
 ## 📦 Installation
 
-Add `montycat_dart` to your `pubspec.yaml`:
+Add `montycat` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat_dart: ^1.0.9
+  montycat: ^1.0.9
 ```
 
 Then fetch packages:
@@ -186,30 +227,32 @@ external APIs, zero API keys, and zero extra infrastructure.**
 > **⚠️ Requires the semantic edition of the server — nothing to compile.** Semantic
 > search runs an embedded ONNX vector-embedding engine that ships only in the
 > **`montycat-semantic`** edition; the default lean `montycat` server does not include it.
-> Get it the way that suits you — pull the `montycat-semantic` **Docker image**, download
-> the prebuilt **package**, or install from the **apt repository**. The Dart client API
-> is identical either way; just point it at a `montycat-semantic` server (semantic search
-> is enabled by default there, using the `bge-small` model).
+> Get it the way that suits you — pull the **Docker image**
+> (`montygovernance/montycat:semantic`), download the prebuilt **package**, or install
+> `montycat-semantic` from the **apt repository**. The Dart client API is identical either
+> way; just point it at a semantic-edition server (semantic search is enabled by default
+> there, using the `bge-small` model).
 
-Enable it once, DB-wide, on the engine; every keyspace is embedded in the background as
-data is written (the embedding model is downloaded on first enable).
+The switch is DB-wide and already on in the semantic edition; every keyspace is embedded
+in the background as data is written (the embedding model is downloaded on demand).
 
 ```dart
-// Turn semantic search on for the whole database (model downloaded on first use).
-// model: 'minilm' | 'bge-small' (default) | 'bge-base' | 'e5-small'
-await engine.enableSemanticSearch();
-
+// Semantic search is ON by default in the montycat-semantic edition — just search.
 // Rank stored items by meaning — two flavors:
 //   getValues → each hit is {key, score, value}
 //   getKeys   → each hit is {key, score} (lighter; fetch a page later with getBulk)
-await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
-await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5]);
+final hits = await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
+final keys = await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5]);
 
 // Optionally drop weak matches by cosine similarity (range [-1, 1]).
-await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5], minScore: 0.35);
+final strong = await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5], minScore: 0.35);
 
-// Turn it off (vectors are kept so re-enabling resumes instantly;
-// pass dropVectors: true to also clear stored vectors).
+// Control the DB-wide switch (optional — it's already on):
+// switch the embedding model: 'minilm' | 'bge-small' (default) | 'bge-base' | 'e5-small'
+await engine.enableSemanticSearch(model: 'bge-base');
+
+// turn it off (vectors are kept so re-enabling resumes instantly;
+// pass dropVectors: true to also clear stored vectors)
 await engine.disableSemanticSearch();
 ```
 
@@ -222,3 +265,17 @@ await engine.disableSemanticSearch();
 - Schema Support: Optional runtime schema enforcement.
 - Safe & Secure: Rust-powered engine with TLS.
 - Flutter Compatible: Works seamlessly on mobile, desktop, and web.
+
+## 🔗 Links
+
+- 🌐 **Website & Docs** — https://montygovernance.com
+- 📦 **pub.dev** — https://pub.dev/packages/montycat
+- 🐳 **Docker Hub** — https://hub.docker.com/r/montygovernance/montycat
+- 💻 **Source** — https://github.com/MontyGovernance/montycat_dart
+
+## ❓ FAQ
+
+- **Is Montycat a vector database or a NoSQL database?** Both — one engine. Store records and query them by *meaning* (vector / semantic search) or by key/schema, without running two systems.
+- **Do I need OpenAI or an embedding API?** No. Embeddings run on-device in the `montycat-semantic` server. No API keys, no per-query bill, no data egress.
+- **Is it a Pinecone / Weaviate / Chroma / Qdrant alternative?** Yes — self-hosted and open-source, with a NoSQL store built in.
+- **Does it work with Flutter?** Yes — mobile, web, desktop, and server-side Dart, on the same async API.

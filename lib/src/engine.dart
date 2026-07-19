@@ -332,6 +332,19 @@ class Engine {
     return await _executeQuery(["queue-depths"]);
   }
 
+  /// Fetch the current DB-wide node settings so UIs can show live state instead
+  /// of blind Enable/Disable toggles. Requires superowner credentials. Read-only
+  /// mirror of the individual setters ([enableReports], [enableWaitForIndex],
+  /// [allowSubscriptions], [setSnapshotRate], [setExpirationCheckRate]).
+  ///
+  /// The response payload is a JSON object:
+  /// `{ reports, wait_for_index, subscriptions, snapshot_rate, expiration_check_rate }`.
+  /// `expiration_check_rate` is the check period in whole seconds — the same value
+  /// you pass to [setExpirationCheckRate] (stored as-is, like the snapshot rate).
+  Future<dynamic> nodeInfo() async {
+    return await _executeQuery(["node-info"]);
+  }
+
   /// Set the server-wide snapshot rate. Requires superowner credentials.
   ///
   /// - [rate]: the snapshot rate value (server-defined units).
@@ -341,8 +354,8 @@ class Engine {
 
   /// Set how often the server scans for expired keys. Requires superowner credentials.
   ///
-  /// - [rate]: number of 15-minute intervals between expiration scans; multiplied
-  ///   by 900 seconds server-side (e.g. `rate = 4` → a scan every 60 minutes).
+  /// - [rate]: the check period in whole seconds (e.g. `rate = 10` → a scan every
+  ///   10 seconds). Stored as-is, like the snapshot rate. Defaults to 1 second.
   Future<dynamic> setExpirationCheckRate(int rate) async {
     return await _executeQuery(["expiration-check", rate.toString()]);
   }

@@ -1,7 +1,9 @@
 name: montycat
-description: >
-  Montycat Dart client: the self-hosted NoSQL + vector database for Dart and Flutter with built-in AI semantic search for RAG & AI agents, async operations, real-time subscriptions, in-memory and persistent storage.
-version: 1.0.9
+description: >-
+  Self-hosted vector database + NoSQL with built-in AI semantic search — the
+  Dart & Flutter client for Montycat. A Rust-powered Pinecone alternative for
+  RAG & AI agents.
+version: 1.0.10
 environment:
   sdk: ">=3.7.2 <4.0.0"
 
@@ -16,9 +18,11 @@ topics:
   - vector-database
   - semantic-search
   - rag
-  - embeddings
+  - ai-agents
   - nosql
 
 license: MIT
 homepage: https://montygovernance.com
+repository: https://github.com/MontyGovernance/montycat_dart
+issue_tracker: https://github.com/MontyGovernance/montycat_dart/issues
 documentation: https://pub.dev/documentation/montycat/latest/
