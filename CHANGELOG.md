@@ -41,3 +41,6 @@
   - `enableSemanticSearch({model, field, store})` / `disableSemanticSearch({dropVectors, store})` — toggle semantic search DB-wide (or scoped to a single store) and choose the embedding model (`minilm`, `bge-small` (default), `bge-base`, `e5-small`).
   - `semanticSearchGetValues(query, {limit, minScore})` — retrieve records ranked by meaning, each returned with its key, similarity score, and value.
   - `semanticSearchGetKeys(query, {limit, minScore})` — lighter key-and-score results; use `minScore` to drop weak matches.
+
+## 1.0.11
+- **Semantic search response fields renamed to the dunder envelope** used everywhere else in the API. Each hit from `semanticSearchGetValues` is now `{__key__, __score__, __value__}` (was `{key, score, value}`); `semanticSearchGetKeys` returns `{__key__, __score__}`. This matches the `__key__`/`__value__` wrapper `lookupValuesWhere(keyIncluded: true)` already returns. **Wire-breaking** for code that read the old `key`/`score`/`value` field names.

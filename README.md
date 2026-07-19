@@ -14,7 +14,7 @@ The official Dart & Flutter SDK for [Montycat](https://montygovernance.com) — 
 // Search your data by MEANING — no external APIs, no separate vector database.
 // (already ON by default in the montycat-semantic server edition)
 final hits = await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
-// → [{key, score, value}, ...] ranked by semantic similarity
+// → [{__key__, __score__, __value__}, ...] ranked by semantic similarity
 ```
 
 > ### 🧩 All-in-one. AI-native. **Zero external dependencies.**
@@ -239,8 +239,8 @@ in the background as data is written (the embedding model is downloaded on deman
 ```dart
 // Semantic search is ON by default in the montycat-semantic edition — just search.
 // Rank stored items by meaning — two flavors:
-//   getValues → each hit is {key, score, value}
-//   getKeys   → each hit is {key, score} (lighter; fetch a page later with getBulk)
+//   getValues → each hit is {__key__, __score__, __value__}
+//   getKeys   → each hit is {__key__, __score__} (lighter; fetch a page later with getBulk)
 final hits = await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
 final keys = await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5]);
 

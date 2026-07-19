@@ -613,7 +613,7 @@ abstract class KV {
   /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
   ///   value; null applies no score filter.
   ///
-  /// Each hit is `{"key": ..., "score": ...}`.
+  /// Each hit is `{"__key__": ..., "__score__": ...}`.
   ///
   /// Example:
   ///
@@ -651,7 +651,9 @@ abstract class KV {
   /// - [withPointers]: Whether to include pointers (foreign values) in each value.
   /// - [pointersMetadata]: Whether to include pointer metadata in each value.
   ///
-  /// Each hit is `{"key": ..., "score": ..., "value": ...}`.
+  /// Each hit is `{"__key__": ..., "__score__": ..., "__value__": ...}` — the
+  /// same dunder envelope `lookupValuesWhere` returns with `keyIncluded: true`,
+  /// plus the score.
   ///
   /// Example:
   ///
