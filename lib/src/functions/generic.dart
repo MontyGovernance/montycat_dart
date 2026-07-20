@@ -91,6 +91,7 @@ Uint8List convertToBinaryQuery({
   bool pointersMetadata = false,
   String? semanticQuery,
   double? minScore,
+  Map<String, dynamic>? semanticFilter,
   bool? waitForIndex,
 }) {
   searchCriteria = searchCriteria ?? {};
@@ -171,6 +172,15 @@ Uint8List convertToBinaryQuery({
   // unchanged for existing commands (the server defaults the field to null).
   if (minScore != null) {
     queryDict['min_score'] = minScore;
+  }
+
+  // Hybrid metadata pre-filter for `semantic_search` (hard AND constraint,
+  // same criteria shape as lookupKeysWhere — Timestamp/Pointer supported).
+  // Omit when null so the wire is unchanged for existing commands.
+  if (semanticFilter != null) {
+    queryDict['semantic_filter'] = jsonEncode(
+      handleTimestampsAndPointers(semanticFilter),
+    );
   }
 
   // Per-request wait_for_index override for persistent writes; omit when null

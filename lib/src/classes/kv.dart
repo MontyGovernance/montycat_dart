@@ -564,6 +564,7 @@ abstract class KV {
     String query,
     List<int> limit,
     double? minScore,
+    Map<String, dynamic>? filters,
     bool withPointers,
     bool keyIncluded,
     bool pointersMetadata,
@@ -587,6 +588,7 @@ abstract class KV {
       semanticQuery: query,
       limitOutput: limitOutput,
       minScore: minScore,
+      semanticFilter: filters,
       withPointers: withPointers,
       keyIncluded: keyIncluded,
       pointersMetadata: pointersMetadata,
@@ -629,7 +631,50 @@ abstract class KV {
     List<int> limit = const [],
     double? minScore,
   }) async {
-    return await _semanticSearchCore(query, limit, minScore, false, false, false);
+    return await _semanticSearchCore(query, limit, minScore, null, false, false, false);
+  }
+
+  /// Hybrid semantic search returning ranked keys only, restricted by a
+  /// metadata filter.
+  ///
+  /// Same ranking as [semanticSearchGetKeys], but only items matching
+  /// [filters] are considered — a hard AND constraint through the same
+  /// criteria stack as [lookupKeysWhere] (indexed fields, Timestamp,
+  /// Pointer). Scores stay pure cosine; the filter never boosts, it only
+  /// restricts. A filter matching nothing returns `[]`.
+  ///
+  /// A separate method (not a parameter on [semanticSearchGetKeys]) so
+  /// existing integrations keep their exact signature.
+  ///
+  /// - [query]: The natural-language query text to embed and search for.
+  /// - [filters]: Metadata criteria, same shape as [lookupKeysWhere].
+  /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
+  ///   apply its default top-k (10).
+  /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
+  ///   value; null applies no score filter.
+  ///
+  /// Each hit is `{"__key__": ..., "__score__": ...}`.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final res = await keyspace.semanticSearchGetKeysWhere(
+  ///   'astronomy and outer space',
+  ///   {'category': 'space'},
+  ///   limit: [0, 3],
+  /// );
+  /// ```
+  ///
+  Future<dynamic> semanticSearchGetKeysWhere(
+    String query,
+    Map<String, dynamic> filters, {
+    List<int> limit = const [],
+    double? minScore,
+  }) async {
+    if (filters.isEmpty) {
+      throw ArgumentError("No filters provided for hybrid semantic search.");
+    }
+    return await _semanticSearchCore(query, limit, minScore, filters, false, false, false);
   }
 
   /// Semantic (vector similarity) search returning ranked hits with their values.
@@ -668,7 +713,55 @@ abstract class KV {
     bool withPointers = false,
     bool pointersMetadata = false,
   }) async {
-    return await _semanticSearchCore(query, limit, minScore, withPointers, true, pointersMetadata);
+    return await _semanticSearchCore(query, limit, minScore, null, withPointers, true, pointersMetadata);
+  }
+
+  /// Hybrid semantic search returning ranked hits with their values,
+  /// restricted by a metadata filter.
+  ///
+  /// Same ranking as [semanticSearchGetValues], but only items matching
+  /// [filters] are considered — a hard AND constraint through the same
+  /// criteria stack as [lookupKeysWhere] (indexed fields, Timestamp,
+  /// Pointer). Scores stay pure cosine; the filter never boosts, it only
+  /// restricts. A filter matching nothing returns `[]`.
+  ///
+  /// A separate method (not a parameter on [semanticSearchGetValues]) so
+  /// existing integrations keep their exact signature.
+  ///
+  /// - [query]: The natural-language query text to embed and search for.
+  /// - [filters]: Metadata criteria, same shape as [lookupKeysWhere].
+  /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
+  ///   apply its default top-k (10).
+  /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
+  ///   value; null applies no score filter.
+  /// - [withPointers]: Whether to include pointers (foreign values) in each value.
+  /// - [pointersMetadata]: Whether to include pointer metadata in each value.
+  ///
+  /// Each hit is `{"__key__": ..., "__score__": ..., "__value__": ...}` — the
+  /// same dunder envelope `lookupValuesWhere` returns with `keyIncluded: true`,
+  /// plus the score.
+  ///
+  /// Example:
+  ///
+  /// ```dart
+  /// final res = await keyspace.semanticSearchGetValuesWhere(
+  ///   'astronomy and outer space',
+  ///   {'category': 'space'},
+  /// );
+  /// ```
+  ///
+  Future<dynamic> semanticSearchGetValuesWhere(
+    String query,
+    Map<String, dynamic> filters, {
+    List<int> limit = const [],
+    double? minScore,
+    bool withPointers = false,
+    bool pointersMetadata = false,
+  }) async {
+    if (filters.isEmpty) {
+      throw ArgumentError("No filters provided for hybrid semantic search.");
+    }
+    return await _semanticSearchCore(query, limit, minScore, filters, withPointers, true, pointersMetadata);
   }
 
   /// Lists all keys that depend on the given key.
