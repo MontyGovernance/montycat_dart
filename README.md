@@ -13,8 +13,8 @@ The official Dart & Flutter SDK for [Montycat](https://montygovernance.com) — 
 ```dart
 // Search your data by MEANING — no external APIs, no separate vector database.
 // (already ON by default in the montycat-semantic server edition)
-final hits = await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
-// → [{__key__, __score__, __value__}, ...] ranked by semantic similarity
+final hits = await production.semanticSearchGetValues('Show all Bluetooth devices', limit: [0, 5]);
+// → [{__key__: 123..., __score__: 0.78, __value__: { name: 'Wireless Headphones' }}]
 ```
 
 > ### 🧩 All-in-one. AI-native. **Zero external dependencies.**
@@ -254,6 +254,29 @@ await engine.enableSemanticSearch(model: 'bge-base');
 // turn it off (vectors are kept so re-enabling resumes instantly;
 // pass dropVectors: true to also clear stored vectors)
 await engine.disableSemanticSearch();
+```
+
+### Hybrid semantic search
+
+Combine meaning-based ranking with structured metadata constraints. The filter
+is a hard AND pre-filter, not a relevance boost; it supports the same criteria
+shape as `lookupKeysWhere`.
+
+```dart
+final matchingKeys = await production.semanticSearchGetKeysWhere(
+  'astronomy and outer space',
+  {'category': 'space'},
+  limit: [0, 5],
+  minScore: 0.35,
+);
+
+final matchingValues = await production.semanticSearchGetValuesWhere(
+  'astronomy and outer space',
+  {'category': 'space'},
+  limit: [0, 5],
+);
+// key hits:    {__key__, __score__}
+// value hits:  {__key__, __score__, __value__}
 ```
 
 ## ⚡ Features in Action
