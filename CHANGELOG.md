@@ -44,3 +44,11 @@
 
 ## 1.0.11
 - **Semantic search response fields renamed to the dunder envelope** used everywhere else in the API. Each hit from `semanticSearchGetValues` is now `{__key__, __score__, __value__}` (was `{key, score, value}`); `semanticSearchGetKeys` returns `{__key__, __score__}`. This matches the `__key__`/`__value__` wrapper `lookupValuesWhere(keyIncluded: true)` already returns. **Wire-breaking** for code that read the old `key`/`score`/`value` field names.
+
+## Unreleased
+- Added hybrid semantic search with `semanticSearchGetKeysWhere` and
+  `semanticSearchGetValuesWhere`.
+- Hybrid search applies metadata criteria as a hard AND pre-filter using the
+  same field, timestamp, and pointer criteria as `lookupKeysWhere`; results
+  remain ranked by cosine similarity.
+- Added optional `minScore` filtering to hybrid search.
