@@ -249,7 +249,7 @@ final strong = await production.semanticSearchGetKeys('bulk order of blue widget
 
 // Control the DB-wide switch (optional — it's already on):
 // switch the embedding model: 'minilm' | 'bge-small' (default) | 'bge-base' | 'e5-small'
-await engine.enableSemanticSearch(model: 'bge-base');
+await engine.enableSemanticSearch(model: SemanticModel.bgeBase);
 
 // turn it off (vectors are kept so re-enabling resumes instantly;
 // pass dropVectors: true to also clear stored vectors)
@@ -302,3 +302,23 @@ final matchingValues = await production.semanticSearchGetValuesWhere(
 - **Do I need OpenAI or an embedding API?** No. Embeddings run on-device in the `montycat-semantic` server. No API keys, no per-query bill, no data egress.
 - **Is it a Pinecone / Weaviate / Chroma / Qdrant alternative?** Yes — self-hosted and open-source, with a NoSQL store built in.
 - **Does it work with Flutter?** Yes — mobile, web, desktop, and server-side Dart, on the same async API.
+## Data mesh governance
+
+Owners can inspect their effective policy and superowners can grant delegated
+keyspace authority programmatically:
+
+```dart
+await engine.policyGrant(
+  owner: 'alice',
+  capability: PolicyCapability.provisionKeyspace,
+  store: 'catalog',
+  types: [PolicyKeyspaceType.inMemory, PolicyKeyspaceType.persistent],
+  models: [SemanticModel.bgeSmall],
+);
+await engine.policyView(owner: 'alice', store: 'catalog');
+await engine.enableSemanticSearch(
+  store: 'catalog', keyspace: 'products', model: SemanticModel.bgeSmall);
+```
+
+Superowners may also call `policyValidate`, `policyPlan`, `policyApply`, and
+`policyExport` with `json`, `yaml`, or `yml` policy documents.
