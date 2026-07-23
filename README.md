@@ -308,6 +308,9 @@ Owners can inspect their effective policy and superowners can grant delegated
 keyspace authority programmatically:
 
 ```dart
+import 'package:montycat/montycat.dart'
+    show PolicyCapability, PolicyKeyspaceType, SemanticModel;
+
 await engine.policyGrant(
   owner: 'alice',
   capability: PolicyCapability.provisionKeyspace,
