@@ -326,7 +326,9 @@ class Engine {
       store,
     ];
     if (owner != null) command.addAll(["owner", owner]);
-    if (keyspace != null) command.addAll(["keyspace", keyspace]);
+    if (keyspace != null && capability != PolicyCapability.provisionKeyspace) {
+      command.addAll(["keyspace", keyspace]);
+    }
     if (keyspaceType != null) command.addAll(["type", keyspaceType.wireName]);
     if (model != null) command.addAll(["model", model.wireName]);
     return await _executeQuery(command);
@@ -350,9 +352,15 @@ class Engine {
       "store",
       store,
     ];
-    if (keyspace != null) command.addAll(["keyspace", keyspace]);
-    if (types.isNotEmpty) command.addAll(["types", ...types.map((type) => type.wireName)]);
-    if (models.isNotEmpty) command.addAll(["models", ...models.map((model) => model.wireName)]);
+    if (keyspace != null && capability != PolicyCapability.provisionKeyspace) {
+      command.addAll(["keyspace", keyspace]);
+    }
+    if (types.isNotEmpty) {
+      command.addAll(["types", ...types.map((type) => type.wireName)]);
+    }
+    if (models.isNotEmpty) {
+      command.addAll(["models", ...models.map((model) => model.wireName)]);
+    }
     return await _executeQuery(command);
   }
 

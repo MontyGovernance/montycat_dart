@@ -28,8 +28,7 @@ enum PolicyCapability {
 /// Keyspace storage types addressable by governance policies.
 enum PolicyKeyspaceType {
   inMemory('inmemory'),
-  persistent('persistent'),
-  distributed('distributed');
+  persistent('persistent');
 
   const PolicyKeyspaceType(this.wireName);
   final String wireName;
