@@ -2,7 +2,13 @@ import 'utils.dart' show sendData;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'tools.dart' show Permission;
+import 'tools.dart'
+    show
+        Permission,
+        PolicyCapability,
+        PolicyKeyspaceType,
+        SemanticModel,
+        PolicyFormat;
 
 /// The `Engine` class provides methods to interact with a Montycat server.
 ///
@@ -242,14 +248,19 @@ class Engine {
   ///   enable.
   ///
   Future<dynamic> enableSemanticSearch({
-    String? model,
+    SemanticModel? model,
     String? field,
     String? store,
+    String? keyspace,
   }) async {
+    if (keyspace != null && store == null) {
+      throw ArgumentError("A store is required when keyspace is specified");
+    }
     final List<dynamic> command = ["enable-semantic-search"];
-    if (model != null) command.addAll(["model", model]);
+    if (model != null) command.addAll(["model", model.wireName]);
     if (field != null) command.addAll(["field", field]);
     if (store != null) command.addAll(["store", store]);
+    if (keyspace != null) command.addAll(["keyspace", keyspace]);
     return await _executeQuery(command);
   }
 
@@ -273,12 +284,246 @@ class Engine {
   Future<dynamic> disableSemanticSearch({
     bool dropVectors = false,
     String? store,
+    String? keyspace,
   }) async {
+    if (keyspace != null && store == null) {
+      throw ArgumentError("A store is required when keyspace is specified");
+    }
     final List<dynamic> command = ["disable-semantic-search"];
     if (dropVectors) command.add("drop-vectors");
     if (store != null) command.addAll(["store", store]);
+    if (keyspace != null) command.addAll(["keyspace", keyspace]);
     return await _executeQuery(command);
   }
+
+  Future<dynamic> policyView({String? owner, String? store}) async {
+    final command = <dynamic>["policy-view"];
+    if (owner != null) command.addAll(["owner", owner]);
+    if (store != null) command.addAll(["store", store]);
+    return await _executeQuery(command);
+  }
+
+  Future<dynamic> policyHistory({
+    String? owner,
+    String? store,
+    String? keyspace,
+  }) async {
+    final command = <dynamic>["policy-history"];
+    if (owner != null) command.addAll(["owner", owner]);
+    if (store != null) command.addAll(["store", store]);
+    if (keyspace != null) command.addAll(["keyspace", keyspace]);
+    return await _executeQuery(command);
+  }
+
+  Future<dynamic> policyExplain({
+    required PolicyCapability capability,
+    required String store,
+    String? owner,
+    String? keyspace,
+    PolicyKeyspaceType? keyspaceType,
+    SemanticModel? model,
+  }) async {
+    if (keyspaceType != null &&
+        capability == PolicyCapability.manageSnapshots) {
+      throw ArgumentError(
+        "keyspaceType is not valid for manage-snapshots policies; snapshots are always in-memory",
+      );
+    }
+    if (model != null &&
+        capability != PolicyCapability.provisionKeyspace &&
+        capability != PolicyCapability.manageSemantic) {
+      throw ArgumentError(
+        "model is only valid for provision-keyspace or manage-semantic policies",
+      );
+    }
+    final command = <dynamic>[
+      "policy-explain",
+      "capability",
+      capability.wireName,
+      "store",
+      store,
+    ];
+    if (owner != null) command.addAll(["owner", owner]);
+    if (keyspace != null && capability != PolicyCapability.provisionKeyspace) {
+      command.addAll(["keyspace", keyspace]);
+    }
+    if (keyspaceType != null) command.addAll(["type", keyspaceType.wireName]);
+    if (model != null) command.addAll(["model", model.wireName]);
+    return await _executeQuery(command);
+  }
+
+  Future<dynamic> _policyMutation(
+    String operation, {
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) async {
+    if (types.isNotEmpty && capability == PolicyCapability.manageSnapshots) {
+      throw ArgumentError(
+        "types is not valid for manage-snapshots policies; snapshots are always in-memory",
+      );
+    }
+    if (models.isNotEmpty &&
+        capability != PolicyCapability.provisionKeyspace &&
+        capability != PolicyCapability.manageSemantic) {
+      throw ArgumentError(
+        "models is only valid for provision-keyspace or manage-semantic policies",
+      );
+    }
+    final command = <dynamic>[
+      operation,
+      "owner",
+      owner,
+      "capability",
+      capability.wireName,
+      "store",
+      store,
+    ];
+    if (keyspace != null && capability != PolicyCapability.provisionKeyspace) {
+      command.addAll(["keyspace", keyspace]);
+    }
+    if (types.isNotEmpty) {
+      command.addAll(["types", ...types.map((type) => type.wireName)]);
+    }
+    if (models.isNotEmpty) {
+      command.addAll(["models", ...models.map((model) => model.wireName)]);
+    }
+    return await _executeQuery(command);
+  }
+
+  Future<dynamic> policyGrant({
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) => _policyMutation(
+    "policy-grant",
+    owner: owner,
+    capability: capability,
+    store: store,
+    keyspace: keyspace,
+    types: types,
+    models: models,
+  );
+
+  Future<dynamic> policyRevoke({
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) => _policyMutation(
+    "policy-revoke",
+    owner: owner,
+    capability: capability,
+    store: store,
+    keyspace: keyspace,
+    types: types,
+    models: models,
+  );
+
+  Future<dynamic> policyDeny({
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) => _policyMutation(
+    "policy-deny",
+    owner: owner,
+    capability: capability,
+    store: store,
+    keyspace: keyspace,
+    types: types,
+    models: models,
+  );
+
+  Future<dynamic> policyRemoveDenial({
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) => _policyMutation(
+    "policy-remove-denial",
+    owner: owner,
+    capability: capability,
+    store: store,
+    keyspace: keyspace,
+    types: types,
+    models: models,
+  );
+
+  Future<dynamic> policyPreviewGrant({
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) => _policyMutation(
+    "policy-preview-grant",
+    owner: owner,
+    capability: capability,
+    store: store,
+    keyspace: keyspace,
+    types: types,
+    models: models,
+  );
+
+  Future<dynamic> policyPreviewRevoke({
+    required String owner,
+    required PolicyCapability capability,
+    required String store,
+    String? keyspace,
+    List<PolicyKeyspaceType> types = const [],
+    List<SemanticModel> models = const [],
+  }) => _policyMutation(
+    "policy-preview-revoke",
+    owner: owner,
+    capability: capability,
+    store: store,
+    keyspace: keyspace,
+    types: types,
+    models: models,
+  );
+
+  Future<dynamic> _policyManifest(
+    String operation,
+    String document,
+    PolicyFormat format,
+  ) {
+    return _executeQuery([
+      operation,
+      "format",
+      format.wireName,
+      "document",
+      document,
+    ]);
+  }
+
+  Future<dynamic> policyValidate(
+    String document, {
+    PolicyFormat format = PolicyFormat.json,
+  }) => _policyManifest("policy-validate", document, format);
+  Future<dynamic> policyPlan(
+    String document, {
+    PolicyFormat format = PolicyFormat.json,
+  }) => _policyManifest("policy-plan", document, format);
+  Future<dynamic> policyApply(
+    String document, {
+    PolicyFormat format = PolicyFormat.json,
+  }) => _policyManifest("policy-apply", document, format);
+  Future<dynamic> policyExport({PolicyFormat format = PolicyFormat.json}) =>
+      _executeQuery(["policy-export", "format", format.wireName]);
 
   /// Enables the DB-wide "wait for index" default.
   ///

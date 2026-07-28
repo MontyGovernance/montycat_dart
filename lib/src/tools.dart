@@ -12,6 +12,49 @@ enum Permission {
   }
 }
 
+/// Capabilities that can be granted through data-mesh governance policies.
+enum PolicyCapability {
+  provisionKeyspace('provision-keyspace'),
+  removeKeyspace('remove-keyspace'),
+  manageSnapshots('manage-snapshots'),
+  manageSemantic('manage-semantic'),
+  manageSchema('manage-schema'),
+  manageAccess('manage-access');
+
+  const PolicyCapability(this.wireName);
+  final String wireName;
+}
+
+/// Keyspace storage types addressable by governance policies.
+enum PolicyKeyspaceType {
+  inMemory('inmemory'),
+  persistent('persistent');
+
+  const PolicyKeyspaceType(this.wireName);
+  final String wireName;
+}
+
+/// Compiled embedding models supported by Montycat semantic search.
+enum SemanticModel {
+  miniLm('minilm'),
+  bgeSmall('bge-small'),
+  bgeBase('bge-base'),
+  e5Small('e5-small');
+
+  const SemanticModel(this.wireName);
+  final String wireName;
+}
+
+/// Serialization formats accepted by policy manifest commands.
+enum PolicyFormat {
+  json('json'),
+  yaml('yaml'),
+  yml('yml');
+
+  const PolicyFormat(this.wireName);
+  final String wireName;
+}
+
 /// A class for handling timestamp conditions.
 ///
 /// Supports single timestamps, ranges, or before/after conditions.
