@@ -1,3 +1,26 @@
+## 1.1.0 - 2026-07-28
+
+### Added
+
+- Data-mesh governance policy APIs on `Engine`:
+  - inspection: `policyView`, `policyHistory`, `policyExplain`, `policyExport`
+  - mutation: `policyGrant`, `policyRevoke`, `policyDeny`, `policyRemoveDenial`
+  - dry runs: `policyPreviewGrant`, `policyPreviewRevoke`
+  - manifests: `policyValidate`, `policyPlan`, `policyApply`
+- `PolicyCapability`, `PolicyKeyspaceType`, `SemanticModel`, and `PolicyFormat`,
+  exported from the package root.
+- Keyspace-scoped semantic enrollment and removal through `keyspace` on
+  `enableSemanticSearch` and `disableSemanticSearch`.
+
+### Changed
+
+- Governance qualifiers are validated client-side before sending a command:
+  - semantic models apply to `provisionKeyspace` and `manageSemantic`
+  - storage types apply to `provisionKeyspace`, `removeKeyspace`, `manageSchema`,
+    `manageAccess`, and `manageSemantic`; `manageSnapshots` is always in-memory
+- `provisionKeyspace` is treated as a store-level capability, so its policy commands
+  omit `keyspace`.
+
 ## 1.0.1
 - Initial release.
 
@@ -45,7 +68,7 @@
 ## 1.0.11
 - **Semantic search response fields renamed to the dunder envelope** used everywhere else in the API. Each hit from `semanticSearchGetValues` is now `{__key__, __score__, __value__}` (was `{key, score, value}`); `semanticSearchGetKeys` returns `{__key__, __score__}`. This matches the `__key__`/`__value__` wrapper `lookupValuesWhere(keyIncluded: true)` already returns. **Wire-breaking** for code that read the old `key`/`score`/`value` field names.
 
-## Unreleased
+## 1.0.12
 - Added hybrid semantic search with `semanticSearchGetKeysWhere` and
   `semanticSearchGetValuesWhere`.
 - Hybrid search applies metadata criteria as a hard AND pre-filter using the

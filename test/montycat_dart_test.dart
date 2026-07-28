@@ -1,4 +1,6 @@
 import 'package:montycat/src/utils.dart' show recursiveParseJson;
+import 'package:montycat/montycat.dart'
+    show Engine, PolicyCapability, PolicyKeyspaceType, SemanticModel;
 import 'package:test/test.dart';
 
 void main() {
@@ -22,6 +24,42 @@ void main() {
     expect(
       response['payload']['owned_keyspaces'][0]['revoked_creator_capabilities'],
       ['manage-schema'],
+    );
+  });
+
+  test('policy qualifiers are restricted to their matching capabilities', () {
+    final engine = Engine(
+      host: 'localhost',
+      port: 21210,
+      username: 'owner',
+      password: 'password',
+    );
+
+    expect(
+      engine.policyGrant(
+        owner: 'alice',
+        capability: PolicyCapability.manageSchema,
+        store: 'catalog',
+        models: [SemanticModel.bgeSmall],
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      engine.policyGrant(
+        owner: 'alice',
+        capability: PolicyCapability.manageSnapshots,
+        store: 'catalog',
+        types: [PolicyKeyspaceType.persistent],
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      engine.policyExplain(
+        capability: PolicyCapability.manageSchema,
+        store: 'catalog',
+        model: SemanticModel.bgeSmall,
+      ),
+      throwsArgumentError,
     );
   });
 }

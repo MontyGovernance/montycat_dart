@@ -3,7 +3,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'tools.dart'
-    show Permission, PolicyCapability, PolicyKeyspaceType, SemanticModel, PolicyFormat;
+    show
+        Permission,
+        PolicyCapability,
+        PolicyKeyspaceType,
+        SemanticModel,
+        PolicyFormat;
 
 /// The `Engine` class provides methods to interact with a Montycat server.
 ///
@@ -318,6 +323,19 @@ class Engine {
     PolicyKeyspaceType? keyspaceType,
     SemanticModel? model,
   }) async {
+    if (keyspaceType != null &&
+        capability == PolicyCapability.manageSnapshots) {
+      throw ArgumentError(
+        "keyspaceType is not valid for manage-snapshots policies; snapshots are always in-memory",
+      );
+    }
+    if (model != null &&
+        capability != PolicyCapability.provisionKeyspace &&
+        capability != PolicyCapability.manageSemantic) {
+      throw ArgumentError(
+        "model is only valid for provision-keyspace or manage-semantic policies",
+      );
+    }
     final command = <dynamic>[
       "policy-explain",
       "capability",
@@ -343,6 +361,18 @@ class Engine {
     List<PolicyKeyspaceType> types = const [],
     List<SemanticModel> models = const [],
   }) async {
+    if (types.isNotEmpty && capability == PolicyCapability.manageSnapshots) {
+      throw ArgumentError(
+        "types is not valid for manage-snapshots policies; snapshots are always in-memory",
+      );
+    }
+    if (models.isNotEmpty &&
+        capability != PolicyCapability.provisionKeyspace &&
+        capability != PolicyCapability.manageSemantic) {
+      throw ArgumentError(
+        "models is only valid for provision-keyspace or manage-semantic policies",
+      );
+    }
     final command = <dynamic>[
       operation,
       "owner",
@@ -471,15 +501,27 @@ class Engine {
     String document,
     PolicyFormat format,
   ) {
-    return _executeQuery([operation, "format", format.wireName, "document", document]);
+    return _executeQuery([
+      operation,
+      "format",
+      format.wireName,
+      "document",
+      document,
+    ]);
   }
 
-  Future<dynamic> policyValidate(String document, {PolicyFormat format = PolicyFormat.json}) =>
-      _policyManifest("policy-validate", document, format);
-  Future<dynamic> policyPlan(String document, {PolicyFormat format = PolicyFormat.json}) =>
-      _policyManifest("policy-plan", document, format);
-  Future<dynamic> policyApply(String document, {PolicyFormat format = PolicyFormat.json}) =>
-      _policyManifest("policy-apply", document, format);
+  Future<dynamic> policyValidate(
+    String document, {
+    PolicyFormat format = PolicyFormat.json,
+  }) => _policyManifest("policy-validate", document, format);
+  Future<dynamic> policyPlan(
+    String document, {
+    PolicyFormat format = PolicyFormat.json,
+  }) => _policyManifest("policy-plan", document, format);
+  Future<dynamic> policyApply(
+    String document, {
+    PolicyFormat format = PolicyFormat.json,
+  }) => _policyManifest("policy-apply", document, format);
   Future<dynamic> policyExport({PolicyFormat format = PolicyFormat.json}) =>
       _executeQuery(["policy-export", "format", format.wireName]);
 
