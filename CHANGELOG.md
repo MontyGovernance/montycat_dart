@@ -1,4 +1,31 @@
-## 1.1.0 - 2026-07-28
+## 1.1.1 - 2026-07-29
+
+Documentation, tests, and CI only — no library code changed, so upgrading from
+1.1.0 is optional.
+
+### Added
+
+- README sections for behavior that was previously undocumented: response shape
+  (`{status, payload, error}` and u128 keys arriving as strings), real-time
+  subscriptions with `SubscriptionHandle` and the `port + 1` subscription port,
+  TLS via `useTls`, and owner/access management with `createOwner`, `grantTo`,
+  `revokeFrom`, and `Permission`.
+- Socket-level transport tests covering request framing, response envelope
+  parsing, u128 key preservation, subscription delivery and `stop()`, and
+  connection failures being returned rather than thrown.
+- `ci.yml` workflow running analyze, `dart pub publish --dry-run`, and the test
+  suite on Linux, macOS, and Windows against the stable and beta SDKs.
+- Changelog link in the README.
+
+### Changed
+
+- The publish workflow now runs `dart analyze --fatal-infos` and `dart test`
+  before publishing to pub.dev.
+
+### Fixed
+
+- The README installation snippet pinned `^1.0.10`, a version that predates the
+  governance APIs documented further down the same file.
 
 ### Added
 
