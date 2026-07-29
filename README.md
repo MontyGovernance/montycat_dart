@@ -74,7 +74,7 @@ Add `montycat` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat: ^1.0.10
+  montycat: ^1.1.0
 ```
 
 Then fetch packages:
@@ -279,6 +279,102 @@ final matchingValues = await production.semanticSearchGetValuesWhere(
 // value hits:  {__key__, __score__, __value__}
 ```
 
+## 📨 Response Shape
+
+Every call resolves to the same envelope, so there is one thing to check everywhere:
+
+```dart
+// {status: true,  payload: <result>, error: null}
+// {status: false, payload: null,     error: 'Governance permission denied: ...'}
+
+final res = await customers.insertValue(value: customer.serialize());
+if (res['status'] == true) print(res['payload']);
+```
+
+`payload` is `null` for commands that only acknowledge, the new key for inserts, and a
+list for lookups and semantic searches. **Keys are u128 and always arrive as strings** —
+never parse one into `int`, which silently truncates above 2^63. Invalid arguments throw
+`ArgumentError` before anything touches the network; server-side failures come back in
+`error` with `status: false`.
+
+## 📡 Real-Time Subscriptions
+
+Subscribe to one key or to a whole keyspace and get pushed every change — the reactive
+core behind live dashboards, notifications, and collaborative Flutter apps.
+
+```dart
+// Whole keyspace: omit both key and customKey.
+final handle = await production.subscribe(
+  callback: (event) => print('changed: $event'),
+);
+
+// Or watch a single key (customKey is hashed for you).
+// Passing key and customKey together throws ArgumentError.
+final oneKey = await production.subscribe(
+  key: '30442970696809394303186116932586352271',
+  callback: (event) => print('changed: $event'),
+);
+
+// Stop listening and close the socket. No callback fires after this.
+handle.stop();
+oneKey.stop();
+```
+
+`subscribe` returns a `SubscriptionHandle`; `handle.stopped` reports whether it is still
+live. Subscriptions use the **subscription port**, which defaults to `port + 1` — that is
+the second port (`21211`) published in the Docker command above. Override it with
+`subscriptionPort:` if your deployment maps it elsewhere.
+
+## 🔐 TLS
+
+Set `useTls` to negotiate an encrypted connection. It applies to commands and
+subscriptions alike:
+
+```dart
+final engine = Engine(
+  host: '127.0.0.1',
+  port: 21210,
+  username: 'USER',
+  password: '12345',
+  store: 'Company',
+  useTls: true,
+);
+
+// Engine.fromUri parses credentials but always starts in plaintext — opt in after:
+final fromUri = Engine.fromUri('montycat://USER:12345@127.0.0.1:21210/Company')
+  ..useTls = true;
+```
+
+> **Note.** The client accepts self-signed certificates, which is convenient for local
+> and internal deployments but means the server identity is not verified. Terminate TLS
+> at a trusted proxy if you need certificate pinning.
+
+## 👥 Owners & Access
+
+Governance policies below are written against *owners*, so create them first. A
+superowner provisions an owner, then grants data access — optionally narrowed to
+specific keyspaces:
+
+```dart
+import 'package:montycat/montycat.dart' show Permission;
+
+await engine.createOwner('alice', 'alice-password');
+
+await engine.grantTo('alice', Permission.read);                          // whole store
+await engine.grantTo('alice', Permission.write, keyspaces: ['production']); // scoped
+
+await engine.listOwners();
+
+await engine.revokeFrom('alice', Permission.write, keyspaces: ['production']);
+await engine.removeOwner('alice');
+```
+
+`Permission` is `read`, `write`, or `all`. `grantTo` and `revokeFrom` apply to the
+engine's `store` and throw `ArgumentError` when it is unset. This governs **data
+access**; to delegate *administrative* capabilities such as provisioning keyspaces or
+managing schemas, see [Data-mesh governance](#data-mesh-governance-for-shared-and-multi-tenant-deployments)
+at the end of this document.
+
 ## ⚡ Features in Action
 - 🧠 AI Semantic & Vector Search: rank items by meaning with on-device embeddings — kNN vector search for **RAG, AI agents & LLM apps**, no external API.
 - Async by Default: Full async/await support for all operations.
@@ -295,6 +391,7 @@ final matchingValues = await production.semanticSearchGetValuesWhere(
 - 📦 **pub.dev** — https://pub.dev/packages/montycat
 - 🐳 **Docker Hub** — https://hub.docker.com/r/montygovernance/montycat
 - 💻 **Source** — https://github.com/MontyGovernance/montycat_dart
+- 📝 **Changelog** — [CHANGELOG.md](CHANGELOG.md)
 
 ## ❓ FAQ
 
