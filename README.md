@@ -247,9 +247,27 @@ final keys = await production.semanticSearchGetKeys('bulk order of blue widgets'
 // Optionally drop weak matches by cosine similarity (range [-1, 1]).
 final strong = await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5], minScore: 0.35);
 
-// Control the DB-wide switch (optional — it's already on):
-// switch the embedding model: 'minilm' | 'bge-small' (default) | 'bge-base' | 'e5-small'
-await engine.enableSemanticSearch(model: SemanticModel.bgeBase);
+// Read back the actual model and backfill state.
+final semantic = await engine.getSemanticStatus(
+  store: 'catalog',
+  keyspace: 'products',
+);
+final productsStatus = semantic.keyspace('catalog', 'products');
+
+// Enable an unenrolled keyspace with an explicit model.
+await engine.enableSemanticSearch(
+  model: SemanticModel.bgeBase,
+  store: 'catalog',
+  keyspace: 'products',
+);
+
+// Changing an enrolled keyspace's model is destructive. This atomic operation
+// drops its old vectors and starts a complete backfill.
+await engine.reembedSemanticSearch(
+  model: SemanticModel.bgeBase,
+  store: 'catalog',
+  keyspace: 'products',
+);
 
 // turn it off (vectors are kept so re-enabling resumes instantly;
 // pass dropVectors: true to also clear stored vectors)
