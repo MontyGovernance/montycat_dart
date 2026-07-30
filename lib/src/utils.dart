@@ -65,8 +65,11 @@ Future<dynamic> sendData(
       );
     }
 
-    var queryStr = utf8.decode(query, allowMalformed: true);
-    bool isSubscribe = queryStr.contains("subscribe");
+    // A subscription is the call that supplies a callback — never inferred from
+    // the payload. Searching the request for "subscribe" misread any record whose
+    // value merely contained that word, routing it into the streaming branch
+    // below, which never completes its future.
+    final bool isSubscribe = callback != null;
 
     socket.add([...query, 10]);
     await socket.flush();
@@ -82,7 +85,7 @@ Future<dynamic> sendData(
       final handle = SubscriptionHandle(socket);
 
       lines.listen((line) {
-        if (!handle.stopped && callback != null) {
+        if (!handle.stopped) {
           try {
             var parsed = recursiveParseJson(line.trim());
             callback(parsed);

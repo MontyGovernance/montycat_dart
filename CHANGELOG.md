@@ -1,3 +1,31 @@
+## 1.1.2 - 2026-07-29
+
+Fixes misrouted requests whose payload contains the word `subscribe`.
+**Upgrade from 1.1.1 is recommended.**
+
+### Fixed
+
+- **A request whose value contained the substring `subscribe` returned a
+  `SubscriptionHandle` instead of the response envelope, and leaked its
+  socket.** Subscription mode was detected by searching the serialized request
+  for `subscribe`, so a call like
+  `insertValue(value: {'note': 'please subscribe'})` took the streaming branch:
+  it resolved to a handle rather than `{status, payload, error}`, so reading
+  `res['status']` threw, and the socket was never closed. Any record mentioning
+  the word was affected, `unsubscribe` included.
+
+  A request is now a subscription because the caller supplied a `callback`.
+  That was always the real distinction: `subscribe` is the only method that
+  passes one. Intent is no longer inferred from user data.
+
+  Present in every release before this one. The Rust and Python clients carry
+  the same defect — where it hangs instead of mistyping — and are fixed in their
+  matching releases; the Node client was already correct.
+
+- Note for anyone calling `subscribe()` without a `callback`: that now performs
+  a single request/response and returns the parsed envelope, rather than
+  returning a handle that never fired. Such a call did nothing useful before.
+
 ## 1.1.1 - 2026-07-29
 
 Documentation, tests, and CI only — no library code changed, so upgrading from

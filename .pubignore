@@ -1,1 +1,6 @@
 test/
+NOTES.md
+# Pattern rather than a literal name, so future plan docs are excluded without
+# another edit. pub publishes untracked files too, so a new root-level markdown
+# file would otherwise ship without ever being committed.
+*_PLAN.md

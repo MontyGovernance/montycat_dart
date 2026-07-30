@@ -84,6 +84,47 @@ void main() {
     await server.close();
   });
 
+  // Regression: subscription mode used to be detected by searching the
+  // serialized request for "subscribe", so a record whose value merely
+  // contained that word was answered with a SubscriptionHandle instead of the
+  // response envelope — and its socket was never closed.
+  test(
+    'a value containing "subscribe" is not treated as a subscription',
+    () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((socket) {
+        socket.listen((_) {
+          socket.write('{"status":true,"payload":"1","error":null}\n');
+          socket.close();
+        }, onError: (_) {});
+      });
+
+      for (final note in [
+        'hello',
+        'please subscribe',
+        'subscribe',
+        'unsubscribe',
+      ]) {
+        final response = await sendData(
+          '127.0.0.1',
+          server.port,
+          _query(
+            '{"command":"insert_value","value":"{\\"note\\":\\"$note\\"}"}',
+          ),
+        );
+
+        expect(
+          response,
+          isA<Map>(),
+          reason: '"$note" must return the response envelope, not a handle',
+        );
+        expect(response['status'], isTrue, reason: 'note: $note');
+      }
+
+      await server.close();
+    },
+  );
+
   test('sendData surfaces connection failures instead of throwing', () async {
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     final port = server.port;
