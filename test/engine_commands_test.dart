@@ -83,6 +83,24 @@ void main() {
         store: 'catalog',
         keyspace: 'products',
       );
+      try {
+        await engine.getSemanticStatus(
+          store: 'catalog',
+          keyspace: 'products',
+        );
+      } on StateError {
+        // The command-capture server intentionally returns no payload.
+      }
+      try {
+        await engine.reembedSemanticSearch(
+          model: SemanticModel.bgeBase,
+          field: 'description',
+          store: 'catalog',
+          keyspace: 'products',
+        );
+      } on StateError {
+        // The command-capture server intentionally returns no payload.
+      }
     });
 
     expect(commands.map((query) => query['raw']).toList(), [
@@ -128,6 +146,24 @@ void main() {
       [
         'disable-semantic-search',
         'drop-vectors',
+        'store',
+        'catalog',
+        'keyspace',
+        'products',
+      ],
+      [
+        'get-semantic-status',
+        'store',
+        'catalog',
+        'keyspace',
+        'products',
+      ],
+      [
+        'reembed-semantic-search',
+        'model',
+        'bge-base',
+        'field',
+        'description',
         'store',
         'catalog',
         'keyspace',

@@ -9,6 +9,7 @@ import 'tools.dart'
         PolicyKeyspaceType,
         SemanticModel,
         PolicyFormat;
+import 'semantic.dart' show SemanticReembedResult, SemanticStatus;
 
 /// The `Engine` class provides methods to interact with a Montycat server.
 ///
@@ -247,6 +248,9 @@ class Engine {
   ///   switch is off, a scoped enable enrolls but nothing embeds until a DB-wide
   ///   enable.
   ///
+  /// An already-enrolled keyspace is not modified. An explicitly different
+  /// model or field is rejected; use [reembedSemanticSearch] to replace it.
+  ///
   Future<dynamic> enableSemanticSearch({
     SemanticModel? model,
     String? field,
@@ -294,6 +298,59 @@ class Engine {
     if (store != null) command.addAll(["store", store]);
     if (keyspace != null) command.addAll(["keyspace", keyspace]);
     return await _executeQuery(command);
+  }
+
+  /// Returns the server's actual semantic settings and enrollment state.
+  Future<SemanticStatus> getSemanticStatus({
+    String? store,
+    String? keyspace,
+  }) async {
+    if (keyspace != null && store == null) {
+      throw ArgumentError("A store is required when keyspace is specified");
+    }
+    final command = <dynamic>["get-semantic-status"];
+    if (store != null) command.addAll(["store", store]);
+    if (keyspace != null) command.addAll(["keyspace", keyspace]);
+    final payload = _successfulPayload(
+      await _executeQuery(command),
+      "get semantic status",
+    );
+    return SemanticStatus.fromJson(payload);
+  }
+
+  /// Atomically drops old vectors and starts a full backfill with [model].
+  Future<SemanticReembedResult> reembedSemanticSearch({
+    required SemanticModel model,
+    String? field,
+    required String store,
+    required String keyspace,
+  }) async {
+    final command = <dynamic>[
+      "reembed-semantic-search",
+      "model",
+      model.wireName,
+    ];
+    if (field != null) command.addAll(["field", field]);
+    command.addAll(["store", store, "keyspace", keyspace]);
+    final payload = _successfulPayload(
+      await _executeQuery(command),
+      "re-embed semantic search",
+    );
+    return SemanticReembedResult.fromJson(payload);
+  }
+
+  Map<dynamic, dynamic> _successfulPayload(dynamic response, String operation) {
+    if (response is! Map || response['status'] != true) {
+      final error = response is Map ? response['error'] : null;
+      throw StateError(
+        error?.toString() ?? "Failed to $operation: invalid server response",
+      );
+    }
+    final payload = response['payload'];
+    if (payload is! Map) {
+      throw StateError("Failed to $operation: missing response payload");
+    }
+    return payload;
   }
 
   Future<dynamic> policyView({String? owner, String? store}) async {
