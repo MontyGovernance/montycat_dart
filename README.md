@@ -315,6 +315,66 @@ never parse one into `int`, which silently truncates above 2^63. Invalid argumen
 `ArgumentError` before anything touches the network; server-side failures come back in
 `error` with `status: false`.
 
+## 🔄 Connection Pooling
+
+By default every request opens a socket, sends, reads one response, and closes. Reuse the
+connection instead and the handshake disappears from every call after the first. The win
+scales with how much of your latency is connection setup: large for a chatty service
+issuing many small reads, larger over a network — where the handshake costs a full round
+trip before the query is even sent — and larger again with TLS.
+
+Pooling is opt-in. One new argument, and no call site changes:
+
+```dart
+import 'package:montycat/montycat.dart';
+
+final engine = Engine(
+  host: '127.0.0.1',
+  port: 21210,
+  username: 'USER',
+  password: '12345',
+  store: 'Company',
+  pool: const PoolConfig(),        // ← the only new argument
+);
+
+customers.connectEngine(engine);
+await customers.insertValue(value: customer.serialize());   // unchanged
+
+await closeAllPools();             // before exit
+```
+
+Tune it if you need to:
+
+```dart
+pool: const PoolConfig(maxIdle: 4, idleTimeout: Duration(seconds: 15)),  // defaults: 8, 30s
+```
+
+**Pools are shared per `(host, port, useTls)`.** They live in a library-level registry, not
+on the `Engine`. That matters more here than elsewhere: keyspace state is *per-instance*, so
+a Flutter app creating a keyspace per screen or per rebuild would otherwise get a pool per
+instance. The key is read at request time, so flipping `useTls` after `connectEngine` cannot
+reuse a plaintext connection for a TLS engine.
+
+### On Flutter and mobile
+
+**Backgrounding kills pooled sockets.** iOS and Android close them when the app is
+backgrounded, so every pooled connection is dead on resume. The client detects that before
+reusing one and opens a fresh connection — but the cost is a user-visible round trip, so
+prefer a short `idleTimeout` on mobile.
+
+**Connectivity changes invalidate the pool.** Wi-Fi to cellular kills every pooled
+connection. If your app already observes connectivity, call `closeAllPools()` on a change
+rather than discovering it one failed request at a time.
+
+Because of backgrounding, this client benefits least from pooling on mobile and most on
+server-side Dart. Weight it accordingly.
+
+**Keep `maxIdle` modest.** An idle pooled connection still holds one of the engine's
+connection permits. Raise the defaults only after measuring with `queueDepths()`.
+
+Subscriptions are never pooled — they are long-lived, stream many responses to one request,
+and live on their own port.
+
 ## 📡 Real-Time Subscriptions
 
 Subscribe to one key or to a whole keyspace and get pushed every change — the reactive

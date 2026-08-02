@@ -1,3 +1,64 @@
+## 1.2.0 - 2026-08-02
+
+Opt-in connection pooling. Additive — upgrading needs no code changes, and
+behavior is unchanged until you enable it.
+
+### Added
+
+- **Opt-in connection pooling.** Every request previously opened a socket, sent
+  one request, read one response, and closed. Reuse removes the handshake from
+  every call after the first:
+
+  ```dart
+  import 'package:montycat/montycat.dart';
+
+  final engine = Engine(
+    host: '127.0.0.1', port: 21210, username: 'USER', password: '12345',
+    store: 'Company',
+    pool: const PoolConfig(),      // the only new argument; omit for today's behavior
+  );
+
+  customers.connectEngine(engine);
+  await customers.insertValue(value: customer.serialize());   // unchanged
+
+  await closeAllPools();           // before exit
+  ```
+
+  Pools live in a library-level registry keyed by `(host, port, useTls)`, so
+  every keyspace pointing at one server shares a single pool. That matters more
+  here than in the other clients: keyspace state is **per-instance**, so a
+  Flutter app building a keyspace per screen or per rebuild would otherwise
+  create a pool per instance, and instance lifetime is not something this client
+  controls. The key is read at request time rather than cached at
+  `connectEngine` time, because `useTls` is mutable after construction — caching
+  it would let a TLS engine reuse a plaintext connection.
+
+  Disabled by default: an idle pooled connection still holds one of the engine's
+  connection permits, so the bound is conservative (`maxIdle: 8`, 30s
+  `idleTimeout`). Subscriptions are never pooled.
+
+  **On mobile, prefer a short `idleTimeout`.** iOS and Android kill sockets when
+  an app is backgrounded, so every pooled connection is dead on resume and the
+  cost of discovering that is a user-visible round trip. Apps that already
+  observe connectivity should call `closeAllPools()` when the network changes —
+  Wi-Fi to cellular invalidates every pooled connection — rather than waiting to
+  find out one failed request at a time.
+
+  Exported `PoolConfig` and `closeAllPools` from `package:montycat/montycat.dart`.
+
+### Changed
+
+- **The response framing chain is now built once per connection rather than per
+  request.** The `Socket` → `utf8.decoder` → `LineSplitter` chain was previously
+  constructed inside `sendData` and discarded when the call returned.
+  `LineSplitter` holds a partial trailing line in its own internal buffer, so
+  tearing the chain down between requests would drop it. That was harmless while
+  every connection was closed immediately; on a pooled connection it corrupts
+  the next response. Pooled connections keep the whole chain, and a single
+  persistent listener buffers frames.
+
+  The unpooled path is unchanged.
+
 ## 1.1.3 - 2026-07-31
 
 Adds a way to read the server's real semantic configuration, and a safe way to

@@ -34,6 +34,10 @@ abstract class KV {
   /// Whether to use TLS for the connection.
   bool useTls = false;
 
+  /// Pooling config copied from the engine at [connectEngine] time, or null for
+  /// connect-per-request.
+  PoolConfig? pool;
+
   /// Logical partition inside the store.
   String get keyspace;
   set keyspace(String value);
@@ -66,6 +70,7 @@ abstract class KV {
       query,
       callback: callback,
       useTls: useTls,
+      poolConfig: pool,
     );
   }
 
@@ -97,6 +102,12 @@ abstract class KV {
     password = engine.password;
     store = engine.store;
     useTls = engine.useTls;
+    // Only the *config* is copied. The pool itself lives in a library-level
+    // registry keyed by (host, port, useTls), so every keyspace instance
+    // pointing at one server shares a single pool — important here because
+    // keyspace state is per-instance, and a Flutter app building one per screen
+    // or per rebuild would otherwise create a pool per instance.
+    pool = engine.pool;
   }
 
   /// Enforces a schema for the current keyspace.
