@@ -141,6 +141,13 @@ void main() {
       semanticQuery: 'launch',
       minScore: 0.7,
       semanticFilter: {'created': const Timestamp(after: 'now')},
+      semanticVector: [0.1, 0.2],
+      semanticVectors: {
+        '7': [0.3, 0.4],
+      },
+      semanticVectorList: [
+        [0.5, 0.6],
+      ],
       waitForIndex: true,
     );
     final query = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
@@ -148,6 +155,13 @@ void main() {
     expect(query['search_criteria'], 'launch');
     expect(query['min_score'], 0.7);
     expect(query['wait_for_index'], isTrue);
+    expect(query['semantic_vector'], [0.1, 0.2]);
+    expect(query['semantic_vectors'], {
+      '7': [0.3, 0.4],
+    });
+    expect(query['semantic_vector_list'], [
+      [0.5, 0.6],
+    ]);
     expect(jsonDecode(query['value']), {
       'parent': ['events', 'root'],
     });
@@ -177,6 +191,14 @@ void main() {
     expect(keyspace.getBulk(), throwsArgumentError);
     expect(keyspace.updateBulk(), throwsArgumentError);
     expect(keyspace.semanticSearchGetKeys('   '), throwsArgumentError);
+    expect(
+      keyspace.semanticSearchGetKeys('', vector: const []),
+      throwsArgumentError,
+    );
+    expect(
+      keyspace.semanticSearchGetKeys('', vector: [double.nan]),
+      throwsArgumentError,
+    );
     expect(
       keyspace.semanticSearchGetKeysWhere('launch', {}),
       throwsArgumentError,

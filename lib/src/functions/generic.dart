@@ -92,6 +92,9 @@ Uint8List convertToBinaryQuery({
   String? semanticQuery,
   double? minScore,
   Map<String, dynamic>? semanticFilter,
+  List<double>? semanticVector,
+  Map<String, List<double>> semanticVectors = const {},
+  List<List<double>> semanticVectorList = const [],
   bool? waitForIndex,
 }) {
   searchCriteria = searchCriteria ?? {};
@@ -182,6 +185,13 @@ Uint8List convertToBinaryQuery({
       handleTimestampsAndPointers(semanticFilter),
     );
   }
+  if (semanticVector != null) queryDict['semantic_vector'] = semanticVector;
+  if (semanticVectors.isNotEmpty) {
+    queryDict['semantic_vectors'] = semanticVectors;
+  }
+  if (semanticVectorList.isNotEmpty) {
+    queryDict['semantic_vector_list'] = semanticVectorList;
+  }
 
   // Per-request wait_for_index override for persistent writes; omit when null
   // so the server falls back to its DB-wide default (existing wire unchanged).
@@ -189,7 +199,14 @@ Uint8List convertToBinaryQuery({
     queryDict['wait_for_index'] = waitForIndex;
   }
 
-  return Uint8List.fromList(jsonEncode(queryDict).codeUnits);
+  // UTF-8, not `.codeUnits`: the latter yields UTF-16 code units, which
+  // `Uint8List.fromList` truncates to their low byte. Every non-ASCII
+  // character was destroyed on the way out — "Привет" left as "@825B" — and a
+  // character whose low byte is 0x0A (U+030A, the combining ring above in
+  // decomposed "å", among others) injected the newline that frames the
+  // request, desynchronising the protocol. Identical bytes for ASCII, so the
+  // wire is unchanged for data that already worked.
+  return Uint8List.fromList(utf8.encode(jsonEncode(queryDict)));
 }
 
 /// Processes search criteria for Timestamps and Pointers.
