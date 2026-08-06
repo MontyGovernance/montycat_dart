@@ -46,6 +46,63 @@ behavior is unchanged until you enable it.
 
   Exported `PoolConfig` and `closeAllPools` from `package:montycat/montycat.dart`.
 
+- **Precomputed vectors.** Vectors produced elsewhere — another model, a batch
+  pipeline, an existing embedding store — can now be supplied directly, and the
+  server skips embedding entirely. Requires a Montycat Semantic server 1.3.0 or
+  newer.
+
+  Writes take an optional `vector`, applied after the write succeeds:
+
+  ```dart
+  await keyspace.insertValue(
+    value: {'text': 'a document'},
+    vector: myEmbedding,          // List<double>, omit for server-side embedding
+  );
+  ```
+
+  Available on `insertValue`, `insertCustomKeyValue`, and `updateValue` for both
+  `KeyspaceInMemory` and `KeyspacePersistent`. `insertBulk` takes
+  `List<List<double>> vectors`, paired with `bulkValues` **by position**;
+  `updateBulk` takes `Map<String, List<double>> vectors` for numeric keys and
+  `customVectors` for custom keys.
+
+  Search takes an optional query `vector`, which bypasses text embedding. The
+  query string may be empty when one is supplied:
+
+  ```dart
+  await keyspace.semanticSearchGetValues('', vector: myQueryEmbedding);
+  ```
+
+  Available on `semanticSearchGetKeys`, `semanticSearchGetKeysWhere`,
+  `semanticSearchGetValues`, and `semanticSearchGetValuesWhere`.
+
+  Dimensions must match the keyspace's enrolled model; the server validates
+  before anything reaches the index. A supplied vector is not overwritten by
+  background embedding — a later ordinary write to the same item clears that
+  protection and re-embeds from text.
+
+### Fixed
+
+- **Every non-ASCII character was corrupted on the way out.** The wire encoder
+  ended in `jsonEncode(queryDict).codeUnits`, which yields UTF-16 code units
+  that `Uint8List.fromList` truncates to their low byte. `Привет` left as
+  `@825B`, `café` as invalid UTF-8, `🐱` as `=1` — unrecoverable server-side,
+  not reversible mojibake.
+
+  Worse, a character whose low byte is `0x0A` emitted the newline that frames a
+  request, splitting it mid-JSON. `U+030A` is the combining ring above, so
+  decomposed `å` — the normal form for text originating on macOS — desynchronised
+  the protocol.
+
+  It affected every data operation: inserts, updates, gets, deletes, bulk
+  operations, WHERE lookups, and semantic search. Schema, keyspace, and
+  governance calls were always correct; they encode elsewhere.
+
+  Now `utf8.encode`, matching the rest of this client and the Python, Node, and
+  Rust clients. **Byte-identical for ASCII**, so the wire is unchanged for data
+  that already worked. Data written by an earlier version in a non-Latin script
+  is corrupt at rest and cannot be recovered by upgrading.
+
 ### Changed
 
 - **The response framing chain is now built once per connection rather than per

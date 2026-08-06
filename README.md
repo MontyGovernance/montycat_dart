@@ -297,6 +297,47 @@ final matchingValues = await production.semanticSearchGetValuesWhere(
 // value hits:  {__key__, __score__, __value__}
 ```
 
+### Bring your own vectors
+
+If you already have embeddings — from another model, a batch pipeline, or an
+existing vector store — supply them directly and the server skips embedding.
+Needs a Montycat Semantic server 1.3.0 or newer.
+
+```dart
+// Writing: pass `vector` alongside the value.
+await production.insertValue(
+  value: {'text': 'The Voyager probes left the heliosphere.'},
+  vector: myEmbedding,                     // List<double>
+);
+
+// Bulk: paired with bulkValues by position.
+await production.insertBulk(
+  bulkValues: [doc1, doc2],
+  vectors: [embedding1, embedding2],
+);
+
+// Searching: pass a query vector; the query string may be empty.
+final hits = await production.semanticSearchGetValues(
+  '',
+  vector: myQueryEmbedding,
+  limit: [0, 10],
+);
+```
+
+`vector` is also accepted by `insertCustomKeyValue` and `updateValue`, and
+`updateBulk` takes `vectors` for numeric keys plus `customVectors` for custom
+keys. All four `semanticSearch*` methods accept a query vector.
+
+Dimensions must match the keyspace's enrolled model — the server validates
+before anything reaches the index, so a bad entry in a batch cannot leave the
+graph and the durable store disagreeing. A vector you supplied will not be
+overwritten by background embedding; a later ordinary write to that item clears
+the protection and re-embeds from its text, which is when re-embedding is what
+you want.
+
+Mixing is fine: items with supplied vectors and items the server embeds can
+live in one keyspace, as long as every vector comes from the same model.
+
 ## 📨 Response Shape
 
 Every call resolves to the same envelope, so there is one thing to check everywhere:
