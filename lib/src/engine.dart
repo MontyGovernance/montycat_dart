@@ -1,4 +1,5 @@
 import 'utils.dart' show sendData;
+import 'pool.dart' show PoolConfig;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -55,6 +56,7 @@ class Engine {
     required this.password,
     this.store,
     this.useTls = false,
+    this.pool,
   });
 
   final String host;
@@ -63,6 +65,16 @@ class Engine {
   final String password;
   late String? store;
   late bool useTls;
+
+  /// Enables connection pooling for request/response traffic, or `null` for
+  /// connect-per-request.
+  ///
+  /// Pools live in a library-level registry keyed by `(host, port, useTls)`, so
+  /// every keyspace pointing at one server shares a single pool. Subscriptions
+  /// are never pooled. Call [closeAllPools] before exit, and from a
+  /// connectivity listener on mobile — switching Wi-Fi to cellular invalidates
+  /// every pooled connection.
+  PoolConfig? pool;
 
   /// Creates an `Engine` instance from a URI string.
   ///
@@ -121,7 +133,7 @@ class Engine {
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
-    return await sendData(host, port, queryBytes, useTls: useTls);
+    return await sendData(host, port, queryBytes, useTls: useTls, poolConfig: pool);
   }
 
   /// Creates a new store on the Montycat server.

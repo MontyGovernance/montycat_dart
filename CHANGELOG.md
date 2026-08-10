@@ -1,3 +1,121 @@
+## 1.2.0 - 2026-08-02
+
+Opt-in connection pooling. Additive — upgrading needs no code changes, and
+behavior is unchanged until you enable it.
+
+### Added
+
+- **Opt-in connection pooling.** Every request previously opened a socket, sent
+  one request, read one response, and closed. Reuse removes the handshake from
+  every call after the first:
+
+  ```dart
+  import 'package:montycat/montycat.dart';
+
+  final engine = Engine(
+    host: '127.0.0.1', port: 21210, username: 'USER', password: '12345',
+    store: 'Company',
+    pool: const PoolConfig(),      // the only new argument; omit for today's behavior
+  );
+
+  customers.connectEngine(engine);
+  await customers.insertValue(value: customer.serialize());   // unchanged
+
+  await closeAllPools();           // before exit
+  ```
+
+  Pools live in a library-level registry keyed by `(host, port, useTls)`, so
+  every keyspace pointing at one server shares a single pool. That matters more
+  here than in the other clients: keyspace state is **per-instance**, so a
+  Flutter app building a keyspace per screen or per rebuild would otherwise
+  create a pool per instance, and instance lifetime is not something this client
+  controls. The key is read at request time rather than cached at
+  `connectEngine` time, because `useTls` is mutable after construction — caching
+  it would let a TLS engine reuse a plaintext connection.
+
+  Disabled by default: an idle pooled connection still holds one of the engine's
+  connection permits, so the bound is conservative (`maxIdle: 8`, 30s
+  `idleTimeout`). Subscriptions are never pooled.
+
+  **On mobile, prefer a short `idleTimeout`.** iOS and Android kill sockets when
+  an app is backgrounded, so every pooled connection is dead on resume and the
+  cost of discovering that is a user-visible round trip. Apps that already
+  observe connectivity should call `closeAllPools()` when the network changes —
+  Wi-Fi to cellular invalidates every pooled connection — rather than waiting to
+  find out one failed request at a time.
+
+  Exported `PoolConfig` and `closeAllPools` from `package:montycat/montycat.dart`.
+
+- **Precomputed vectors.** Vectors produced elsewhere — another model, a batch
+  pipeline, an existing embedding store — can now be supplied directly, and the
+  server skips embedding entirely. Requires a Montycat Semantic server 1.3.0 or
+  newer.
+
+  Writes take an optional `vector`, applied after the write succeeds:
+
+  ```dart
+  await keyspace.insertValue(
+    value: {'text': 'a document'},
+    vector: myEmbedding,          // List<double>, omit for server-side embedding
+  );
+  ```
+
+  Available on `insertValue`, `insertCustomKeyValue`, and `updateValue` for both
+  `KeyspaceInMemory` and `KeyspacePersistent`. `insertBulk` takes
+  `List<List<double>> vectors`, paired with `bulkValues` **by position**;
+  `updateBulk` takes `Map<String, List<double>> vectors` for numeric keys and
+  `customVectors` for custom keys.
+
+  Search takes an optional query `vector`, which bypasses text embedding. The
+  query string may be empty when one is supplied:
+
+  ```dart
+  await keyspace.semanticSearchGetValues('', vector: myQueryEmbedding);
+  ```
+
+  Available on `semanticSearchGetKeys`, `semanticSearchGetKeysWhere`,
+  `semanticSearchGetValues`, and `semanticSearchGetValuesWhere`.
+
+  Dimensions must match the keyspace's enrolled model; the server validates
+  before anything reaches the index. A supplied vector is not overwritten by
+  background embedding — a later ordinary write to the same item clears that
+  protection and re-embeds from text.
+
+### Fixed
+
+- **Every non-ASCII character was corrupted on the way out.** The wire encoder
+  ended in `jsonEncode(queryDict).codeUnits`, which yields UTF-16 code units
+  that `Uint8List.fromList` truncates to their low byte. `Привет` left as
+  `@825B`, `café` as invalid UTF-8, `🐱` as `=1` — unrecoverable server-side,
+  not reversible mojibake.
+
+  Worse, a character whose low byte is `0x0A` emitted the newline that frames a
+  request, splitting it mid-JSON. `U+030A` is the combining ring above, so
+  decomposed `å` — the normal form for text originating on macOS — desynchronised
+  the protocol.
+
+  It affected every data operation: inserts, updates, gets, deletes, bulk
+  operations, WHERE lookups, and semantic search. Schema, keyspace, and
+  governance calls were always correct; they encode elsewhere.
+
+  Now `utf8.encode`, matching the rest of this client and the Python, Node, and
+  Rust clients. **Byte-identical for ASCII**, so the wire is unchanged for data
+  that already worked. Data written by an earlier version in a non-Latin script
+  is corrupt at rest and cannot be recovered by upgrading.
+
+### Changed
+
+- **The response framing chain is now built once per connection rather than per
+  request.** The `Socket` → `utf8.decoder` → `LineSplitter` chain was previously
+  constructed inside `sendData` and discarded when the call returned.
+  `LineSplitter` holds a partial trailing line in its own internal buffer, so
+  tearing the chain down between requests would drop it. That was harmless while
+  every connection was closed immediately; on a pooled connection it corrupts
+  the next response. Pooled connections keep the whole chain, and a single
+  persistent listener buffers frames.
+
+  The unpooled path is unchanged.
+
 ## 1.1.3 - 2026-07-31
 
 Adds a way to read the server's real semantic configuration, and a safe way to

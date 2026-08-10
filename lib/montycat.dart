@@ -9,3 +9,4 @@ export 'src/semantic.dart'
 export 'src/classes/inmemory.dart' show KeyspaceInMemory;
 export 'src/classes/persistent.dart' show KeyspacePersistent;
 export 'src/utils.dart' show SubscriptionHandle;
+export 'src/pool.dart' show PoolConfig, closeAllPools;

@@ -198,6 +198,7 @@ class KeyspaceInMemory extends KV {
 
   /// Inserts multiple values into the keyspace in a single bulk operation.
   /// - [bulkValues]: List of values to insert.
+  /// - [vectors]: Optional precomputed vectors paired with [bulkValues] by position.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [bulkValues] is empty.
   ///
@@ -210,6 +211,7 @@ class KeyspaceInMemory extends KV {
   ///
   Future<dynamic> insertBulk({
     required List bulkValues,
+    List<List<double>> vectors = const [],
     int expireSec = 0,
     bool? waitForIndex,
   }) async {
@@ -221,6 +223,7 @@ class KeyspaceInMemory extends KV {
       cls: this,
       command: "insert_bulk",
       bulkValues: bulkValues,
+      semanticVectorList: vectors,
       expireSec: expireSec,
       waitForIndex: waitForIndex,
     );
@@ -229,6 +232,7 @@ class KeyspaceInMemory extends KV {
 
   /// Updates a value in the keyspace for the given [key] or [customKey].
   /// - [updates] must contain the fields to update.
+  /// - [vector] optionally replaces the stored semantic vector.
   /// - [expireSec] optionally sets a new expiration time.
   /// Throws [ArgumentError] if [updates] is empty or if no valid key is provided.
   /// If [customKey] is provided, it will be used instead of [key].
@@ -248,6 +252,7 @@ class KeyspaceInMemory extends KV {
     String? customKey,
     int expireSec = 0,
     Map<String, dynamic>? updates,
+    List<double>? vector,
     bool? waitForIndex,
   }) async {
     if (customKey != null && customKey.isNotEmpty) {
@@ -266,6 +271,7 @@ class KeyspaceInMemory extends KV {
       command: "update_value",
       key: key,
       value: updates,
+      semanticVector: vector,
       expireSec: expireSec,
       waitForIndex: waitForIndex,
     );
@@ -273,6 +279,7 @@ class KeyspaceInMemory extends KV {
   }
 
   /// Inserts a single [value] into the keyspace.
+  /// - [vector]: Optional precomputed vector that bypasses server-side embedding.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [value] is empty.
   ///
@@ -284,6 +291,7 @@ class KeyspaceInMemory extends KV {
   ///
   Future<dynamic> insertValue({
     required dynamic value,
+    List<double>? vector,
     int expireSec = 0,
     bool? waitForIndex,
   }) async {
@@ -295,6 +303,7 @@ class KeyspaceInMemory extends KV {
       cls: this,
       command: "insert_value",
       value: value,
+      semanticVector: vector,
       expireSec: expireSec,
       waitForIndex: waitForIndex,
     );
@@ -303,6 +312,7 @@ class KeyspaceInMemory extends KV {
 
   /// Inserts a value under a specified [customKey].
   /// - [customKey] must not be empty.
+  /// - [vector]: Optional precomputed vector that bypasses server-side embedding.
   /// - [expireSec]: Optional expiration time in seconds.
   /// Throws [ArgumentError] if [value] or [customKey] is empty.
   ///
@@ -318,6 +328,7 @@ class KeyspaceInMemory extends KV {
   Future<dynamic> insertCustomKeyValue({
     required String customKey,
     required dynamic value,
+    List<double>? vector,
     int expireSec = 0,
     bool? waitForIndex,
   }) async {
@@ -334,6 +345,7 @@ class KeyspaceInMemory extends KV {
       command: "insert_custom_key_value",
       key: customKeyConverted,
       value: value,
+      semanticVector: vector,
       expireSec: expireSec,
       waitForIndex: waitForIndex,
     );

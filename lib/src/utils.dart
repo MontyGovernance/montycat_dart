@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'pool.dart' show PoolConfig, PooledConnection, getPool;
+
 /// Handle for managing active subscriptions.
 /// Allows stopping the subscription and closing the socket.
 /// When stopped, no further callbacks will be invoked.
@@ -47,7 +49,19 @@ Future<dynamic> sendData(
   Uint8List query, {
   void Function(dynamic)? callback,
   bool useTls = false,
+  PoolConfig? poolConfig,
 }) async {
+  // A subscription is the call that supplies a callback — never inferred from
+  // the payload. Searching the request for "subscribe" misread any record whose
+  // value merely contained that word, routing it into the streaming branch,
+  // which never completes its future.
+  //
+  // Subscriptions are never pooled (contract §5): they are long-lived, stream
+  // many responses to one request, and live on the `port + 1` subscription port.
+  if (callback == null && poolConfig != null) {
+    return _pooledRequest(host, port, query, useTls, poolConfig);
+  }
+
   try {
     late Socket socket;
 
@@ -65,10 +79,6 @@ Future<dynamic> sendData(
       );
     }
 
-    // A subscription is the call that supplies a callback — never inferred from
-    // the payload. Searching the request for "subscribe" misread any record whose
-    // value merely contained that word, routing it into the streaming branch
-    // below, which never completes its future.
     final bool isSubscribe = callback != null;
 
     socket.add([...query, 10]);
@@ -109,6 +119,78 @@ Future<dynamic> sendData(
     return e;
   } catch (e) {
     print("Unexpected error: $e (address: $host, port: $port)");
+    return e;
+  }
+}
+
+/// Open one connection and wrap it with its framing chain for pooling.
+Future<PooledConnection> _openPooled(
+  String host,
+  int port,
+  bool useTls,
+) async {
+  final Socket socket =
+      useTls
+          ? await SecureSocket.connect(
+            host,
+            port,
+            onBadCertificate: (X509Certificate cert) => true,
+          ).timeout(const Duration(seconds: 10))
+          : await Socket.connect(
+            host,
+            port,
+            timeout: const Duration(seconds: 10),
+          );
+  return PooledConnection(socket);
+}
+
+/// Request/response over a pooled connection.
+///
+/// Errors are returned rather than thrown, matching what this client has always
+/// done — changing that would break every existing caller.
+Future<dynamic> _pooledRequest(
+  String host,
+  int port,
+  Uint8List query,
+  bool useTls,
+  PoolConfig poolConfig,
+) async {
+  // The key is read here, at request time. `useTls` is mutable on the engine
+  // after construction, so caching it at connectEngine time would let a TLS
+  // engine reuse a plaintext connection.
+  final pool = getPool(host, port, useTls, poolConfig)!;
+
+  final leased = await pool.checkout();
+  if (leased != null) {
+    try {
+      final line = await leased.request(query, const Duration(seconds: 120));
+      await pool.checkin(leased);
+      return recursiveParseJson(line.trim());
+    } catch (e) {
+      // Never retry here: the engine may have applied the write and only the
+      // response was lost. These commands are not idempotent and the wire has
+      // no request IDs, so replaying would duplicate data (contract §4). A
+      // genuinely stale connection is caught by `checkout`, before anything is
+      // sent, so this path is a real failure rather than a routine one.
+      await leased.close();
+      return e;
+    }
+  }
+
+  PooledConnection connection;
+  try {
+    connection = await _openPooled(host, port, useTls);
+  } catch (e) {
+    print("Connection error: $e (address: $host, port: $port)");
+    return e;
+  }
+
+  try {
+    final line = await connection.request(query, const Duration(seconds: 120));
+    await pool.checkin(connection);
+    return recursiveParseJson(line.trim());
+  } catch (e) {
+    await connection.close();
     return e;
   }
 }

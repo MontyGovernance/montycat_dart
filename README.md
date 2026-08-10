@@ -297,6 +297,47 @@ final matchingValues = await production.semanticSearchGetValuesWhere(
 // value hits:  {__key__, __score__, __value__}
 ```
 
+### Bring your own vectors
+
+If you already have embeddings — from another model, a batch pipeline, or an
+existing vector store — supply them directly and the server skips embedding.
+Needs a Montycat Semantic server 1.3.0 or newer.
+
+```dart
+// Writing: pass `vector` alongside the value.
+await production.insertValue(
+  value: {'text': 'The Voyager probes left the heliosphere.'},
+  vector: myEmbedding,                     // List<double>
+);
+
+// Bulk: paired with bulkValues by position.
+await production.insertBulk(
+  bulkValues: [doc1, doc2],
+  vectors: [embedding1, embedding2],
+);
+
+// Searching: pass a query vector; the query string may be empty.
+final hits = await production.semanticSearchGetValues(
+  '',
+  vector: myQueryEmbedding,
+  limit: [0, 10],
+);
+```
+
+`vector` is also accepted by `insertCustomKeyValue` and `updateValue`, and
+`updateBulk` takes `vectors` for numeric keys plus `customVectors` for custom
+keys. All four `semanticSearch*` methods accept a query vector.
+
+Dimensions must match the keyspace's enrolled model — the server validates
+before anything reaches the index, so a bad entry in a batch cannot leave the
+graph and the durable store disagreeing. A vector you supplied will not be
+overwritten by background embedding; a later ordinary write to that item clears
+the protection and re-embeds from its text, which is when re-embedding is what
+you want.
+
+Mixing is fine: items with supplied vectors and items the server embeds can
+live in one keyspace, as long as every vector comes from the same model.
+
 ## 📨 Response Shape
 
 Every call resolves to the same envelope, so there is one thing to check everywhere:
@@ -314,6 +355,66 @@ list for lookups and semantic searches. **Keys are u128 and always arrive as str
 never parse one into `int`, which silently truncates above 2^63. Invalid arguments throw
 `ArgumentError` before anything touches the network; server-side failures come back in
 `error` with `status: false`.
+
+## 🔄 Connection Pooling
+
+By default every request opens a socket, sends, reads one response, and closes. Reuse the
+connection instead and the handshake disappears from every call after the first. The win
+scales with how much of your latency is connection setup: large for a chatty service
+issuing many small reads, larger over a network — where the handshake costs a full round
+trip before the query is even sent — and larger again with TLS.
+
+Pooling is opt-in. One new argument, and no call site changes:
+
+```dart
+import 'package:montycat/montycat.dart';
+
+final engine = Engine(
+  host: '127.0.0.1',
+  port: 21210,
+  username: 'USER',
+  password: '12345',
+  store: 'Company',
+  pool: const PoolConfig(),        // ← the only new argument
+);
+
+customers.connectEngine(engine);
+await customers.insertValue(value: customer.serialize());   // unchanged
+
+await closeAllPools();             // before exit
+```
+
+Tune it if you need to:
+
+```dart
+pool: const PoolConfig(maxIdle: 4, idleTimeout: Duration(seconds: 15)),  // defaults: 8, 30s
+```
+
+**Pools are shared per `(host, port, useTls)`.** They live in a library-level registry, not
+on the `Engine`. That matters more here than elsewhere: keyspace state is *per-instance*, so
+a Flutter app creating a keyspace per screen or per rebuild would otherwise get a pool per
+instance. The key is read at request time, so flipping `useTls` after `connectEngine` cannot
+reuse a plaintext connection for a TLS engine.
+
+### On Flutter and mobile
+
+**Backgrounding kills pooled sockets.** iOS and Android close them when the app is
+backgrounded, so every pooled connection is dead on resume. The client detects that before
+reusing one and opens a fresh connection — but the cost is a user-visible round trip, so
+prefer a short `idleTimeout` on mobile.
+
+**Connectivity changes invalidate the pool.** Wi-Fi to cellular kills every pooled
+connection. If your app already observes connectivity, call `closeAllPools()` on a change
+rather than discovering it one failed request at a time.
+
+Because of backgrounding, this client benefits least from pooling on mobile and most on
+server-side Dart. Weight it accordingly.
+
+**Keep `maxIdle` modest.** An idle pooled connection still holds one of the engine's
+connection permits. Raise the defaults only after measuring with `queueDepths()`.
+
+Subscriptions are never pooled — they are long-lived, stream many responses to one request,
+and live on their own port.
 
 ## 📡 Real-Time Subscriptions
 

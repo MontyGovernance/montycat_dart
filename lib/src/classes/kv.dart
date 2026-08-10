@@ -34,6 +34,10 @@ abstract class KV {
   /// Whether to use TLS for the connection.
   bool useTls = false;
 
+  /// Pooling config copied from the engine at [connectEngine] time, or null for
+  /// connect-per-request.
+  PoolConfig? pool;
+
   /// Logical partition inside the store.
   String get keyspace;
   set keyspace(String value);
@@ -66,6 +70,7 @@ abstract class KV {
       query,
       callback: callback,
       useTls: useTls,
+      poolConfig: pool,
     );
   }
 
@@ -97,6 +102,12 @@ abstract class KV {
     password = engine.password;
     store = engine.store;
     useTls = engine.useTls;
+    // Only the *config* is copied. The pool itself lives in a library-level
+    // registry keyed by (host, port, useTls), so every keyspace instance
+    // pointing at one server shares a single pool — important here because
+    // keyspace state is per-instance, and a Flutter app building one per screen
+    // or per rebuild would otherwise create a pool per instance.
+    pool = engine.pool;
   }
 
   /// Enforces a schema for the current keyspace.
@@ -289,7 +300,11 @@ abstract class KV {
   /// await keyspace.deleteKey(key: 'some_key');
   /// ```
   ///
-  Future<dynamic> deleteKey({String? key, String? customKey, bool? waitForIndex}) async {
+  Future<dynamic> deleteKey({
+    String? key,
+    String? customKey,
+    bool? waitForIndex,
+  }) async {
     if (key != null && customKey != null) {
       throw ArgumentError("Provide either 'key' or 'customKey', not both.");
     }
@@ -421,6 +436,8 @@ abstract class KV {
 
   /// Updates multiple key-value pairs at once.
   /// Converts [bulkCustomKeysValues] automatically before sending.
+  /// [vectors] maps numeric keys to precomputed vectors; [customVectors] does
+  /// the same for custom keys, which are converted before transmission.
   /// Throws an [ArgumentError] if no valid key-value pairs are provided.
   /// Throws an [ArgumentError] if [bulkKeysValues] is empty.
   /// Combines [bulkKeysValues] and [bulkCustomKeysValues] into a single map.
@@ -441,6 +458,8 @@ abstract class KV {
   Future<dynamic> updateBulk({
     Map<String, dynamic> bulkKeysValues = const {},
     Map<String, dynamic> bulkCustomKeysValues = const {},
+    Map<String, List<double>> vectors = const {},
+    Map<String, List<double>> customVectors = const {},
     bool? waitForIndex,
   }) async {
     if (bulkKeysValues.isEmpty && bulkCustomKeysValues.isEmpty) {
@@ -453,10 +472,15 @@ abstract class KV {
       final converted = convertCustomKeysValues(bulkCustomKeysValues);
       finalMap.addAll(converted);
     }
+    final semanticVectors = <String, List<double>>{...vectors};
+    for (final entry in customVectors.entries) {
+      semanticVectors[convertCustomKey(entry.key)] = entry.value;
+    }
     final query = convertToBinaryQuery(
       cls: this,
       command: "update_bulk",
       bulkKeysValues: finalMap,
+      semanticVectors: semanticVectors,
       waitForIndex: waitForIndex,
     );
     return await runQuery(host, port, query, useTls: useTls);
@@ -562,6 +586,7 @@ abstract class KV {
   ///
   Future<dynamic> _semanticSearchCore(
     String query,
+    List<double>? vector,
     List<int> limit,
     double? minScore,
     Map<String, dynamic>? filters,
@@ -569,8 +594,12 @@ abstract class KV {
     bool keyIncluded,
     bool pointersMetadata,
   ) async {
-    if (query.trim().isEmpty) {
+    if (vector == null && query.trim().isEmpty) {
       throw ArgumentError("No query text provided for semantic search.");
+    }
+    if (vector != null &&
+        (vector.isEmpty || vector.any((value) => !value.isFinite))) {
+      throw ArgumentError("Semantic vector must contain only finite numbers.");
     }
 
     Map<String, int> limitOutput = {};
@@ -586,6 +615,7 @@ abstract class KV {
       cls: this,
       command: "semantic_search",
       semanticQuery: query,
+      semanticVector: vector,
       limitOutput: limitOutput,
       minScore: minScore,
       semanticFilter: filters,
@@ -609,7 +639,8 @@ abstract class KV {
   /// The keyspace is embedded in the background as items are written, so results
   /// reflect whatever has been embedded so far.
   ///
-  /// - [query]: The natural-language query text to embed and search for.
+  /// - [query]: Query text; it may be empty when [vector] is supplied.
+  /// - [vector]: Optional precomputed query vector that bypasses text embedding.
   /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
   ///   apply its default top-k (10).
   /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
@@ -628,10 +659,20 @@ abstract class KV {
   ///
   Future<dynamic> semanticSearchGetKeys(
     String query, {
+    List<double>? vector,
     List<int> limit = const [],
     double? minScore,
   }) async {
-    return await _semanticSearchCore(query, limit, minScore, null, false, false, false);
+    return await _semanticSearchCore(
+      query,
+      vector,
+      limit,
+      minScore,
+      null,
+      false,
+      false,
+      false,
+    );
   }
 
   /// Hybrid semantic search returning ranked keys only, restricted by a
@@ -646,7 +687,8 @@ abstract class KV {
   /// A separate method (not a parameter on [semanticSearchGetKeys]) so
   /// existing integrations keep their exact signature.
   ///
-  /// - [query]: The natural-language query text to embed and search for.
+  /// - [query]: Query text; it may be empty when [vector] is supplied.
+  /// - [vector]: Optional precomputed query vector that bypasses text embedding.
   /// - [filters]: Metadata criteria, same shape as [lookupKeysWhere].
   /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
   ///   apply its default top-k (10).
@@ -668,13 +710,23 @@ abstract class KV {
   Future<dynamic> semanticSearchGetKeysWhere(
     String query,
     Map<String, dynamic> filters, {
+    List<double>? vector,
     List<int> limit = const [],
     double? minScore,
   }) async {
     if (filters.isEmpty) {
       throw ArgumentError("No filters provided for hybrid semantic search.");
     }
-    return await _semanticSearchCore(query, limit, minScore, filters, false, false, false);
+    return await _semanticSearchCore(
+      query,
+      vector,
+      limit,
+      minScore,
+      filters,
+      false,
+      false,
+      false,
+    );
   }
 
   /// Semantic (vector similarity) search returning ranked hits with their values.
@@ -688,7 +740,8 @@ abstract class KV {
   /// The keyspace is embedded in the background as items are written, so results
   /// reflect whatever has been embedded so far.
   ///
-  /// - [query]: The natural-language query text to embed and search for.
+  /// - [query]: Query text; it may be empty when [vector] is supplied.
+  /// - [vector]: Optional precomputed query vector that bypasses text embedding.
   /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
   ///   apply its default top-k (10).
   /// - [minScore]: Drop hits whose cosine similarity (in [-1, 1]) is below this
@@ -708,12 +761,22 @@ abstract class KV {
   ///
   Future<dynamic> semanticSearchGetValues(
     String query, {
+    List<double>? vector,
     List<int> limit = const [],
     double? minScore,
     bool withPointers = false,
     bool pointersMetadata = false,
   }) async {
-    return await _semanticSearchCore(query, limit, minScore, null, withPointers, true, pointersMetadata);
+    return await _semanticSearchCore(
+      query,
+      vector,
+      limit,
+      minScore,
+      null,
+      withPointers,
+      true,
+      pointersMetadata,
+    );
   }
 
   /// Hybrid semantic search returning ranked hits with their values,
@@ -728,7 +791,8 @@ abstract class KV {
   /// A separate method (not a parameter on [semanticSearchGetValues]) so
   /// existing integrations keep their exact signature.
   ///
-  /// - [query]: The natural-language query text to embed and search for.
+  /// - [query]: Query text; it may be empty when [vector] is supplied.
+  /// - [vector]: Optional precomputed query vector that bypasses text embedding.
   /// - [filters]: Metadata criteria, same shape as [lookupKeysWhere].
   /// - [limit]: `[start, stop]` over the ranked hits; empty lets the server
   ///   apply its default top-k (10).
@@ -753,6 +817,7 @@ abstract class KV {
   Future<dynamic> semanticSearchGetValuesWhere(
     String query,
     Map<String, dynamic> filters, {
+    List<double>? vector,
     List<int> limit = const [],
     double? minScore,
     bool withPointers = false,
@@ -761,7 +826,16 @@ abstract class KV {
     if (filters.isEmpty) {
       throw ArgumentError("No filters provided for hybrid semantic search.");
     }
-    return await _semanticSearchCore(query, limit, minScore, filters, withPointers, true, pointersMetadata);
+    return await _semanticSearchCore(
+      query,
+      vector,
+      limit,
+      minScore,
+      filters,
+      withPointers,
+      true,
+      pointersMetadata,
+    );
   }
 
   /// Lists all keys that depend on the given key.
