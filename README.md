@@ -299,8 +299,22 @@ final matchingValues = await production.semanticSearchGetValuesWhere(
 
 ### Bring your own vectors
 
-If you already have embeddings — from another model, a batch pipeline, or an
-existing vector store — supply them directly and the server skips embedding.
+If you already have embeddings from a batch pipeline or vector store, first
+enroll the keyspace for externally generated vectors. External profiles support
+1–4,096 dimensions for OpenAI-style 1,536d pipelines, Pinecone/Qdrant/Milvus
+migrations, and image or multimodal vectors:
+
+```dart
+await items.createKeyspace(semantic: false);
+await engine.enablePrecomputedVectorSearch(
+  store: 'app', keyspace: 'items', dimensions: 1536,
+  embeddingSpace: 'text-embedding-3-small:v1',
+);
+```
+
+`embeddingSpace` is a descriptive name for the vectors' model/configuration;
+it does not invoke or validate that model. Then supply vectors directly and the
+server skips embedding.
 Needs a Montycat Semantic server 1.3.0 or newer.
 
 ```dart
@@ -328,15 +342,21 @@ final hits = await production.semanticSearchGetValues(
 `updateBulk` takes `vectors` for numeric keys plus `customVectors` for custom
 keys. All four `semanticSearch*` methods accept a query vector.
 
-Dimensions must match the keyspace's enrolled model — the server validates
-before anything reaches the index, so a bad entry in a batch cannot leave the
-graph and the durable store disagreeing. A vector you supplied will not be
+**Embedding-space compatibility is required.** Every supplied record vector and
+query vector must be produced by the model enrolled for that keyspace, including
+the same model revision, preprocessing, pooling, and normalization. Matching the
+dimension alone is not enough: an auto-enrolled BGE-small keyspace accepts only
+BGE-small-compatible 384d vectors. To use vectors from another model, create the
+keyspace with semantic auto-enrollment disabled and enroll a matching external
+profile first. The server validates dimensions before anything reaches the
+index, but it cannot prove that two equal-length vectors came from the same
+embedding space. A vector you supplied will not be
 overwritten by background embedding; a later ordinary write to that item clears
 the protection and re-embeds from its text, which is when re-embedding is what
 you want.
 
 Mixing is fine: items with supplied vectors and items the server embeds can
-live in one keyspace, as long as every vector comes from the same model.
+live in one keyspace as long as every vector comes from the same model.
 
 ## 📨 Response Shape
 

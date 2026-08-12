@@ -1,6 +1,8 @@
 class SemanticKeyspaceStatus {
   final bool enrolled;
   final String model;
+  final String source;
+  final String? embeddingSpace;
   final int dimensions;
   final String? field;
   final bool persistent;
@@ -9,6 +11,8 @@ class SemanticKeyspaceStatus {
   const SemanticKeyspaceStatus({
     required this.enrolled,
     required this.model,
+    required this.source,
+    required this.embeddingSpace,
     required this.dimensions,
     required this.field,
     required this.persistent,
@@ -19,6 +23,8 @@ class SemanticKeyspaceStatus {
     return SemanticKeyspaceStatus(
       enrolled: json['enrolled'] == true,
       model: json['model']?.toString() ?? '',
+      source: json['source']?.toString() ?? 'onboard',
+      embeddingSpace: json['embedding_space']?.toString(),
       dimensions: (json['dimensions'] as num?)?.toInt() ?? 0,
       field: json['field']?.toString(),
       persistent: json['persistent'] == true,

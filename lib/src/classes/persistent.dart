@@ -281,15 +281,14 @@ class KeyspacePersistent extends KV {
   /// await keyspace.createKeyspace();
   /// ```
   ///
-  Future<dynamic> createKeyspace({int? cache, bool? compression}) async {
+  Future<dynamic> createKeyspace({int? cache, bool? compression, bool semantic = true}) async {
     if (store == null || store!.isEmpty) {
       throw ArgumentError("Store name cannot be empty.");
     }
 
     var cacheValue = cache != null ? cache.toString() : "0";
 
-    final queryMap = {
-      "raw": [
+    final raw = <dynamic>[
         "create-keyspace",
         "store",
         store,
@@ -303,7 +302,10 @@ class KeyspacePersistent extends KV {
         cacheValue,
         "compression",
         compression == true ? "y" : "n",
-      ],
+      ];
+    if (!semantic) raw.addAll(["semantic", "off"]);
+    final queryMap = {
+      "raw": raw,
       "credentials": [username, password],
     };
 

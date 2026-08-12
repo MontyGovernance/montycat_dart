@@ -330,6 +330,28 @@ class Engine {
     return SemanticStatus.fromJson(payload);
   }
 
+  /// Enrolls a keyspace for vectors generated outside Montycat.
+  /// Existing records require a client-side vector import/backfill.
+  Future<dynamic> enablePrecomputedVectorSearch({
+    required String store,
+    required String keyspace,
+    required int dimensions,
+    required String embeddingSpace,
+  }) async {
+    if (dimensions < 1 || dimensions > 4096) {
+      throw ArgumentError('dimensions must be between 1 and 4096');
+    }
+    if (embeddingSpace.isEmpty || embeddingSpace.length > 128) {
+      throw ArgumentError('embeddingSpace must contain 1 to 128 characters');
+    }
+    return await _executeQuery(<dynamic>[
+      'enable-semantic-search', 'source', 'external',
+      'dimensions', dimensions.toString(),
+      'embedding-space', embeddingSpace,
+      'store', store, 'keyspace', keyspace,
+    ]);
+  }
+
   /// Atomically drops old vectors and starts a full backfill with [model].
   Future<SemanticReembedResult> reembedSemanticSearch({
     required SemanticModel model,
