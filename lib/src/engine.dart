@@ -133,7 +133,13 @@ class Engine {
     };
     String queryJson = jsonEncode(query);
     Uint8List queryBytes = utf8.encode(queryJson);
-    return await sendData(host, port, queryBytes, useTls: useTls, poolConfig: pool);
+    return await sendData(
+      host,
+      port,
+      queryBytes,
+      useTls: useTls,
+      poolConfig: pool,
+    );
   }
 
   /// Creates a new store on the Montycat server.
@@ -345,10 +351,17 @@ class Engine {
       throw ArgumentError('embeddingSpace must contain 1 to 128 characters');
     }
     return await _executeQuery(<dynamic>[
-      'enable-semantic-search', 'source', 'external',
-      'dimensions', dimensions.toString(),
-      'embedding-space', embeddingSpace,
-      'store', store, 'keyspace', keyspace,
+      'enable-semantic-search',
+      'source',
+      'external',
+      'dimensions',
+      dimensions.toString(),
+      'embedding-space',
+      embeddingSpace,
+      'store',
+      store,
+      'keyspace',
+      keyspace,
     ]);
   }
 

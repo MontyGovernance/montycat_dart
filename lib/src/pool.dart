@@ -77,7 +77,12 @@ class PooledConnection {
         .cast<List<int>>()
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .listen(_onLine, onError: _onError, onDone: _onDone, cancelOnError: true);
+        .listen(
+          _onLine,
+          onError: _onError,
+          onDone: _onDone,
+          cancelOnError: true,
+        );
   }
 
   void _onLine(String line) {
@@ -108,9 +113,7 @@ class PooledConnection {
   /// Parsing is the caller's job, which keeps this library transport-only.
   Future<String> request(Uint8ListLike query, Duration timeout) {
     if (_dead || _pending != null) {
-      return Future.error(
-        const SocketException('connection is not available'),
-      );
+      return Future.error(const SocketException('connection is not available'));
     }
 
     // A frame may already be waiting if the peer wrote ahead of us.
@@ -131,15 +134,18 @@ class PooledConnection {
       return Future.error(e);
     }
 
-    return socket.flush().then((_) => completer.future).timeout(
-      timeout,
-      onTimeout: () {
-        _pending = null;
-        _dead = true;
-        socket.destroy();
-        throw TimeoutException('Operation timed out', timeout);
-      },
-    );
+    return socket
+        .flush()
+        .then((_) => completer.future)
+        .timeout(
+          timeout,
+          onTimeout: () {
+            _pending = null;
+            _dead = true;
+            socket.destroy();
+            throw TimeoutException('Operation timed out', timeout);
+          },
+        );
   }
 
   /// Is this connection usable for a fresh exchange?
@@ -240,9 +246,17 @@ String _keyFor(String host, int port, bool useTls) => '$host:$port:$useTls';
 ///
 /// Returns `null` when no config is supplied, which is how pooling stays
 /// opt-in: the caller then connects per request exactly as before.
-ConnectionPool? getPool(String host, int port, bool useTls, PoolConfig? config) {
+ConnectionPool? getPool(
+  String host,
+  int port,
+  bool useTls,
+  PoolConfig? config,
+) {
   if (config == null) return null;
-  return _pools.putIfAbsent(_keyFor(host, port, useTls), () => ConnectionPool(config));
+  return _pools.putIfAbsent(
+    _keyFor(host, port, useTls),
+    () => ConnectionPool(config),
+  );
 }
 
 /// Drain every pool.

@@ -1,3 +1,11 @@
+## 1.2.1 - 2026-08-12
+
+### Changed
+
+- Applied Dart analyzer and formatter cleanups across the public exports,
+  engine, keyspace, pooling, transport, and test code. This release contains
+  no API or runtime behavior changes.
+
 ## 1.2.0 - 2026-08-02
 
 Opt-in connection pooling. Additive — upgrading needs no code changes, and

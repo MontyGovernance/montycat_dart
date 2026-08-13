@@ -150,12 +150,16 @@ class KeyspaceInMemory extends KV {
   ///
   Future<dynamic> createKeyspace({bool semantic = true}) async {
     final raw = <dynamic>[
-        "create-keyspace",
-        "store", store,
-        "keyspace", keyspace,
-        "persistent", persistent ? "y" : "n",
-        "distributed", distributed ? "y" : "n",
-      ];
+      "create-keyspace",
+      "store",
+      store,
+      "keyspace",
+      keyspace,
+      "persistent",
+      persistent ? "y" : "n",
+      "distributed",
+      distributed ? "y" : "n",
+    ];
     if (!semantic) raw.addAll(["semantic", "off"]);
     final queryMap = {
       "raw": raw,

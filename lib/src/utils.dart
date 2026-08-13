@@ -124,11 +124,7 @@ Future<dynamic> sendData(
 }
 
 /// Open one connection and wrap it with its framing chain for pooling.
-Future<PooledConnection> _openPooled(
-  String host,
-  int port,
-  bool useTls,
-) async {
+Future<PooledConnection> _openPooled(String host, int port, bool useTls) async {
   final Socket socket =
       useTls
           ? await SecureSocket.connect(

@@ -88,19 +88,26 @@ Engine engineFor(int port, {PoolConfig? pool}) => Engine(
 void main() {
   tearDown(() async => closeAllPools());
 
-  test('pooling is off by default and opens a connection per request', () async {
-    final stub = StubServer();
-    await stub.start();
-    try {
-      final engine = engineFor(stub.port);
-      for (var i = 0; i < 5; i++) {
-        await engine.listOwners();
+  test(
+    'pooling is off by default and opens a connection per request',
+    () async {
+      final stub = StubServer();
+      await stub.start();
+      try {
+        final engine = engineFor(stub.port);
+        for (var i = 0; i < 5; i++) {
+          await engine.listOwners();
+        }
+        expect(
+          stub.accepts,
+          5,
+          reason: 'unpooled engine must not reuse connections',
+        );
+      } finally {
+        await stub.stop();
       }
-      expect(stub.accepts, 5, reason: 'unpooled engine must not reuse connections');
-    } finally {
-      await stub.stop();
-    }
-  });
+    },
+  );
 
   test('sequential requests reuse one pooled connection', () async {
     final stub = StubServer();
@@ -110,7 +117,11 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await engine.listOwners();
       }
-      expect(stub.accepts, 1, reason: '10 requests should share one connection');
+      expect(
+        stub.accepts,
+        1,
+        reason: '10 requests should share one connection',
+      );
     } finally {
       await stub.stop();
     }
@@ -127,7 +138,11 @@ void main() {
       final b = engineFor(stub.port, pool: const PoolConfig());
       await a.listOwners();
       await b.listOwners();
-      expect(stub.accepts, 1, reason: 'the second engine opened its own connection');
+      expect(
+        stub.accepts,
+        1,
+        reason: 'the second engine opened its own connection',
+      );
     } finally {
       await stub.stop();
     }
@@ -165,7 +180,11 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 80));
 
       final second = await engine.listOwners();
-      expect(second, isA<Map>(), reason: 'stale connection not replaced cleanly: $second');
+      expect(
+        second,
+        isA<Map>(),
+        reason: 'stale connection not replaced cleanly: $second',
+      );
       expect(stub.accepts, 2, reason: 'expected exactly one fresh connection');
     } finally {
       await stub.stop();
@@ -174,14 +193,19 @@ void main() {
 
   test('no bytes leak between two requests on one pooled connection', () async {
     final stub = StubServer(
-      responder: (_, served) => '{"status":true,"payload":"response-$served"}\n',
+      responder:
+          (_, served) => '{"status":true,"payload":"response-$served"}\n',
     );
     await stub.start();
     try {
       final engine = engineFor(stub.port, pool: const PoolConfig());
       final first = await engine.listOwners() as Map;
       final second = await engine.listOwners() as Map;
-      expect(stub.accepts, 1, reason: 'the requests did not share a connection');
+      expect(
+        stub.accepts,
+        1,
+        reason: 'the requests did not share a connection',
+      );
       expect(first['payload'], 'response-0');
       expect(second['payload'], 'response-1');
     } finally {
@@ -189,47 +213,63 @@ void main() {
     }
   });
 
-  test('the LineSplitter partial line survives across two pooled requests', () async {
-    // The failure this client is most exposed to: `LineSplitter` holds a partial
-    // trailing line in its own buffer, so rebuilding the chain per request would
-    // drop it. The stub answers the first request in two writes, splitting the
-    // JSON mid-token, then answers the second normally.
-    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    var accepts = 0;
-    try {
-      server.listen((socket) {
-        accepts++;
-        var served = 0;
-        socket
-            .cast<List<int>>()
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())
-            .listen((_) async {
-              if (served == 0) {
-                socket.write('{"status":true,"pay');
-                await socket.flush();
-                await Future<void>.delayed(const Duration(milliseconds: 20));
-                socket.write('load":"split"}\n');
-              } else {
-                socket.write('{"status":true,"payload":"second"}\n');
-              }
-              served++;
-            }, onError: (_) {}, cancelOnError: true);
-      });
+  test(
+    'the LineSplitter partial line survives across two pooled requests',
+    () async {
+      // The failure this client is most exposed to: `LineSplitter` holds a partial
+      // trailing line in its own buffer, so rebuilding the chain per request would
+      // drop it. The stub answers the first request in two writes, splitting the
+      // JSON mid-token, then answers the second normally.
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      var accepts = 0;
+      try {
+        server.listen((socket) {
+          accepts++;
+          var served = 0;
+          socket
+              .cast<List<int>>()
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())
+              .listen(
+                (_) async {
+                  if (served == 0) {
+                    socket.write('{"status":true,"pay');
+                    await socket.flush();
+                    await Future<void>.delayed(
+                      const Duration(milliseconds: 20),
+                    );
+                    socket.write('load":"split"}\n');
+                  } else {
+                    socket.write('{"status":true,"payload":"second"}\n');
+                  }
+                  served++;
+                },
+                onError: (_) {},
+                cancelOnError: true,
+              );
+        });
 
-      final engine = engineFor(server.port, pool: const PoolConfig());
-      final first = await engine.listOwners() as Map;
-      final second = await engine.listOwners() as Map;
+        final engine = engineFor(server.port, pool: const PoolConfig());
+        final first = await engine.listOwners() as Map;
+        final second = await engine.listOwners() as Map;
 
-      expect(first['payload'], 'split', reason: 'a split frame was not reassembled');
-      expect(second['payload'], 'second', reason: 'the second exchange was corrupted');
-      expect(accepts, 1, reason: 'the connection was not reused');
-
-    } finally {
-      await closeAllPools();
-      await server.close();
-    }
-  });
+        expect(
+          first['payload'],
+          'split',
+          reason: 'a split frame was not reassembled',
+        );
+        expect(
+          second['payload'],
+          'second',
+          reason: 'the second exchange was corrupted',
+        );
+        expect(accepts, 1, reason: 'the connection was not reused');
+      } finally {
+        await closeAllPools();
+        await server.close();
+      }
+    },
+  );
 
   test('a response larger than one chunk is reassembled', () async {
     final filler = 'x' * (600 * 1024);
@@ -240,8 +280,11 @@ void main() {
     try {
       final engine = engineFor(stub.port, pool: const PoolConfig());
       final result = await engine.listOwners() as Map;
-      expect((result['payload'] as String).length, 600 * 1024,
-          reason: 'large response was truncated');
+      expect(
+        (result['payload'] as String).length,
+        600 * 1024,
+        reason: 'large response was truncated',
+      );
     } finally {
       await stub.stop();
     }
@@ -272,10 +315,16 @@ void main() {
     final secure = getPool('127.0.0.1', 21210, true, config);
     final plainAgain = getPool('127.0.0.1', 21210, false, config);
 
-    expect(identical(plain, secure), isFalse,
-        reason: 'a TLS engine would reuse a plaintext connection');
-    expect(identical(plain, plainAgain), isTrue,
-        reason: 'the same target must resolve to the same pool');
+    expect(
+      identical(plain, secure),
+      isFalse,
+      reason: 'a TLS engine would reuse a plaintext connection',
+    );
+    expect(
+      identical(plain, plainAgain),
+      isTrue,
+      reason: 'the same target must resolve to the same pool',
+    );
   });
 
   test('no config means no pool', () {

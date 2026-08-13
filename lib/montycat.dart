@@ -3,7 +3,14 @@ library;
 export 'src/engine.dart' show Engine;
 export 'src/schema.dart' show Schema, FieldType, DynamicSchema, makeSchema;
 export 'src/tools.dart'
-    show Pointer, Timestamp, Permission, PolicyCapability, PolicyKeyspaceType, SemanticModel, PolicyFormat;
+    show
+        Pointer,
+        Timestamp,
+        Permission,
+        PolicyCapability,
+        PolicyKeyspaceType,
+        SemanticModel,
+        PolicyFormat;
 export 'src/semantic.dart'
     show SemanticKeyspaceStatus, SemanticStatus, SemanticReembedResult;
 export 'src/classes/inmemory.dart' show KeyspaceInMemory;

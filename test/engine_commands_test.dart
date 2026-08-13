@@ -84,10 +84,7 @@ void main() {
         keyspace: 'products',
       );
       try {
-        await engine.getSemanticStatus(
-          store: 'catalog',
-          keyspace: 'products',
-        );
+        await engine.getSemanticStatus(store: 'catalog', keyspace: 'products');
       } on StateError {
         // The command-capture server intentionally returns no payload.
       }
@@ -151,13 +148,7 @@ void main() {
         'keyspace',
         'products',
       ],
-      [
-        'get-semantic-status',
-        'store',
-        'catalog',
-        'keyspace',
-        'products',
-      ],
+      ['get-semantic-status', 'store', 'catalog', 'keyspace', 'products'],
       [
         'reembed-semantic-search',
         'model',

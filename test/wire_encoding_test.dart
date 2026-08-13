@@ -100,9 +100,10 @@ void main() {
         ],
       );
       final decoded = json.decode(utf8.decode(bytes)) as Map<String, dynamic>;
-      final bulk = (decoded['bulk_values'] as List)
-          .map((v) => json.decode(v as String)['text'])
-          .toList();
+      final bulk =
+          (decoded['bulk_values'] as List)
+              .map((v) => json.decode(v as String)['text'])
+              .toList();
 
       expect(bulk, ['Привет', '日本語']);
     });
@@ -120,16 +121,15 @@ void main() {
     test('ASCII payloads are byte-identical to the old encoding', () {
       // The fix must not move the wire for data that already worked.
       final bytes = convertToBinaryQuery(
-        cls: KeyspaceInMemory(keyspace: 'events')
-          ..connectEngine(
-            Engine(
-              host: '127.0.0.1',
-              port: 21210,
-              username: 'owner',
-              password: 'secret',
-              store: 'shop',
-            ),
+        cls: KeyspaceInMemory(keyspace: 'events')..connectEngine(
+          Engine(
+            host: '127.0.0.1',
+            port: 21210,
+            username: 'owner',
+            password: 'secret',
+            store: 'shop',
           ),
+        ),
         command: 'insert',
         value: {'text': 'plain ascii'},
       );
