@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:montycat/montycat.dart';
 
-import '../tools.dart' show Limit;
+import '../tools.dart' show Limit, ResultOrder;
 import '../utils.dart' show sendData;
 import '../functions/generic.dart'
     show
@@ -383,6 +383,7 @@ abstract class KV {
     List<String> bulkKeys = const [],
     List<String> bulkCustomKeys = const [],
     List<int> limit = const [],
+    ResultOrder? order,
     bool withPointers = false,
     bool keyIncluded = false,
     bool pointersMetadata = false,
@@ -423,6 +424,7 @@ abstract class KV {
       cls: this,
       command: "get_bulk",
       limitOutput: limitOutput,
+      order: order,
       bulkKeys: bulkKeys,
       withPointers: withPointers,
       keyIncluded: keyIncluded,
@@ -505,6 +507,7 @@ abstract class KV {
   ///
   Future<dynamic> lookupKeysWhere({
     List<int> limit = const [],
+    ResultOrder? order,
     String? schema,
     Map<String, dynamic> searchCriteria = const {},
   }) async {
@@ -521,6 +524,7 @@ abstract class KV {
       cls: this,
       command: "lookup_keys",
       limitOutput: limitOutput,
+      order: order,
       searchCriteria: searchCriteria,
       schema: schema,
     );
@@ -549,6 +553,7 @@ abstract class KV {
   ///
   Future<dynamic> lookupValuesWhere({
     List<int> limit = const [],
+    ResultOrder? order,
     String? schema,
     Map<String, dynamic> searchCriteria = const {},
     bool withPointers = false,
@@ -568,6 +573,7 @@ abstract class KV {
       cls: this,
       command: "lookup_values",
       limitOutput: limitOutput,
+      order: order,
       searchCriteria: searchCriteria,
       withPointers: withPointers,
       schema: schema,

@@ -1,6 +1,6 @@
 import 'package:hashlib/hashlib.dart' show xxh32code;
 import 'dart:convert';
-import '../tools.dart' show Pointer, Timestamp;
+import '../tools.dart' show Pointer, ResultOrder, Timestamp;
 import 'dart:typed_data' show Uint8List;
 
 /// Converts any key to a hashed string using XXH32.
@@ -76,6 +76,7 @@ Uint8List convertToBinaryQuery({
   required dynamic cls,
   required String command,
   Map<String, int> limitOutput = const {},
+  ResultOrder? order,
   String? key,
   Map<String, dynamic>? searchCriteria,
   dynamic value,
@@ -151,6 +152,7 @@ Uint8List convertToBinaryQuery({
     'persistent': cls.persistent,
     'distributed': cls.distributed,
     'limit_output': limitOutput,
+    'order': order?.name,
     'key': key?.toString(),
     'value': jsonEncode(value),
     'command': command,
