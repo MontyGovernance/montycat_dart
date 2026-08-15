@@ -128,3 +128,5 @@ class Limit {
     return {"start": start, "stop": stop};
   }
 }
+
+enum ResultOrder { ascending, descending }

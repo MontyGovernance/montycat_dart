@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add `ResultOrder` and optional ordering to key-range, bulk, and lookup reads.
+
 ## 1.2.1 - 2026-08-12
 
 ### Changed

@@ -208,6 +208,7 @@ class KeyspacePersistent extends KV {
   ///
   Future<dynamic> getKeys({
     List<int> limit = const [],
+    ResultOrder? order,
     List<String> volumes = const [],
     bool latestVolume = false,
   }) async {
@@ -235,6 +236,7 @@ class KeyspacePersistent extends KV {
       cls: this,
       command: "get_keys",
       limitOutput: limitOutput,
+      order: order,
       volumes: volumes,
       latestVolume: latestVolume,
     );

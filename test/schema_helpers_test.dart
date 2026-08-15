@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:montycat/montycat.dart';
 import 'package:montycat/src/functions/generic.dart';
-import 'package:montycat/src/tools.dart' show Limit;
+import 'package:montycat/src/tools.dart' show Limit, ResultOrder;
 import 'package:montycat/src/utils.dart' show isU128, recursiveParseJson;
 import 'package:test/test.dart';
 
@@ -79,6 +79,16 @@ void main() {
       ),
       throwsArgumentError,
     );
+  });
+
+  test('serializes explicit result ordering', () {
+    final bytes = convertToBinaryQuery(
+      cls: QueryContext(),
+      command: 'get_keys',
+      order: ResultOrder.ascending,
+    );
+    final query = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+    expect(query['order'], 'ascending');
   });
 
   test('parses nested JSON while preserving u128 strings', () {

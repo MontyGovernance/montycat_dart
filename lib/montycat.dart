@@ -10,7 +10,8 @@ export 'src/tools.dart'
         PolicyCapability,
         PolicyKeyspaceType,
         SemanticModel,
-        PolicyFormat;
+        PolicyFormat,
+        ResultOrder;
 export 'src/semantic.dart'
     show SemanticKeyspaceStatus, SemanticStatus, SemanticReembedResult;
 export 'src/classes/inmemory.dart' show KeyspaceInMemory;
