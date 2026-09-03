@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:montycat/montycat.dart';
 
-import '../tools.dart' show Limit, ResultOrder;
+import '../tools.dart' show Limit, ResultOrder, SearchMode;
 import '../utils.dart' show sendData;
 import '../functions/generic.dart'
     show
@@ -599,8 +599,13 @@ abstract class KV {
     bool withPointers,
     bool keyIncluded,
     bool pointersMetadata,
+    SearchMode mode,
   ) async {
-    if (vector == null && query.trim().isEmpty) {
+    if (filters != null && filters.isEmpty) {
+      throw ArgumentError("Search filters cannot be empty.");
+    }
+    if ((mode != SearchMode.semantic || vector == null) &&
+        query.trim().isEmpty) {
       throw ArgumentError("No query text provided for semantic search.");
     }
     if (vector != null &&
@@ -619,7 +624,7 @@ abstract class KV {
 
     final binaryQuery = convertToBinaryQuery(
       cls: this,
-      command: "semantic_search",
+      command: mode.command,
       semanticQuery: query,
       semanticVector: vector,
       limitOutput: limitOutput,
@@ -663,8 +668,11 @@ abstract class KV {
   /// );
   /// ```
   ///
-  Future<dynamic> semanticSearchGetKeys(
-    String query, {
+  /// Return relevance-ranked keys using semantic, BM25, or hybrid search.
+  Future<dynamic> searchKeys({
+    required String query,
+    SearchMode mode = SearchMode.semantic,
+    Map<String, dynamic>? filters,
     List<double>? vector,
     List<int> limit = const [],
     double? minScore,
@@ -674,10 +682,52 @@ abstract class KV {
       vector,
       limit,
       minScore,
-      null,
+      filters,
       false,
       false,
       false,
+      mode,
+    );
+  }
+
+  /// Return relevance-ranked values using semantic, BM25, or hybrid search.
+  Future<dynamic> searchValues({
+    required String query,
+    SearchMode mode = SearchMode.semantic,
+    Map<String, dynamic>? filters,
+    List<double>? vector,
+    List<int> limit = const [],
+    double? minScore,
+    bool withPointers = false,
+    bool pointersMetadata = false,
+  }) async {
+    return await _semanticSearchCore(
+      query,
+      vector,
+      limit,
+      minScore,
+      filters,
+      withPointers,
+      true,
+      pointersMetadata,
+      mode,
+    );
+  }
+
+  @Deprecated(
+    'Use searchKeys; this compatibility wrapper remains semantic-only.',
+  )
+  Future<dynamic> semanticSearchGetKeys(
+    String query, {
+    List<double>? vector,
+    List<int> limit = const [],
+    double? minScore,
+  }) async {
+    return await searchKeys(
+      query: query,
+      vector: vector,
+      limit: limit,
+      minScore: minScore,
     );
   }
 
@@ -713,6 +763,9 @@ abstract class KV {
   /// );
   /// ```
   ///
+  @Deprecated(
+    'Use searchKeys with filters; this wrapper remains semantic-only.',
+  )
   Future<dynamic> semanticSearchGetKeysWhere(
     String query,
     Map<String, dynamic> filters, {
@@ -723,15 +776,12 @@ abstract class KV {
     if (filters.isEmpty) {
       throw ArgumentError("No filters provided for hybrid semantic search.");
     }
-    return await _semanticSearchCore(
-      query,
-      vector,
-      limit,
-      minScore,
-      filters,
-      false,
-      false,
-      false,
+    return await searchKeys(
+      query: query,
+      filters: filters,
+      vector: vector,
+      limit: limit,
+      minScore: minScore,
     );
   }
 
@@ -765,6 +815,9 @@ abstract class KV {
   /// final res = await keyspace.semanticSearchGetValues('recipes for dinner');
   /// ```
   ///
+  @Deprecated(
+    'Use searchValues; this compatibility wrapper remains semantic-only.',
+  )
   Future<dynamic> semanticSearchGetValues(
     String query, {
     List<double>? vector,
@@ -773,15 +826,13 @@ abstract class KV {
     bool withPointers = false,
     bool pointersMetadata = false,
   }) async {
-    return await _semanticSearchCore(
-      query,
-      vector,
-      limit,
-      minScore,
-      null,
-      withPointers,
-      true,
-      pointersMetadata,
+    return await searchValues(
+      query: query,
+      vector: vector,
+      limit: limit,
+      minScore: minScore,
+      withPointers: withPointers,
+      pointersMetadata: pointersMetadata,
     );
   }
 
@@ -820,6 +871,9 @@ abstract class KV {
   /// );
   /// ```
   ///
+  @Deprecated(
+    'Use searchValues with filters; this wrapper remains semantic-only.',
+  )
   Future<dynamic> semanticSearchGetValuesWhere(
     String query,
     Map<String, dynamic> filters, {
@@ -832,15 +886,14 @@ abstract class KV {
     if (filters.isEmpty) {
       throw ArgumentError("No filters provided for hybrid semantic search.");
     }
-    return await _semanticSearchCore(
-      query,
-      vector,
-      limit,
-      minScore,
-      filters,
-      withPointers,
-      true,
-      pointersMetadata,
+    return await searchValues(
+      query: query,
+      filters: filters,
+      vector: vector,
+      limit: limit,
+      minScore: minScore,
+      withPointers: withPointers,
+      pointersMetadata: pointersMetadata,
     );
   }
 

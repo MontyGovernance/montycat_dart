@@ -3,7 +3,7 @@ description: >-
   Self-hosted vector database + NoSQL with built-in AI semantic search — the
   Dart & Flutter client for Montycat. A Rust-powered Pinecone alternative for
   RAG & AI agents.
-version: 1.2.2
+version: 1.2.3
 environment:
   sdk: ">=3.7.2 <4.0.0"
 

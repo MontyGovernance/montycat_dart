@@ -1,3 +1,17 @@
+## 1.2.3 - 2026-09-02
+
+- Added exported `SearchMode`, `searchKeys`, and `searchValues`, with optional
+  metadata filters. Existing `semanticSearch*` methods are deprecated
+  semantic-only wrappers with unchanged signatures and behavior. Unsupported
+  older engines reject keyword and hybrid commands. Current engines normalize
+  hybrid RRF scores to `[0, 1]`.
+
+### Documentation
+
+- Clarify score semantics: hybrid RRF is bounded to `[0, 1]`, while raw BM25
+  keyword scores are unbounded and should only be compared within the same
+  query and search mode.
+
 ## 1.2.2 - 2026-08-15
 
 - Add `ResultOrder` and optional ordering to key-range, bulk, and lookup reads.

@@ -13,7 +13,7 @@ The official Dart & Flutter SDK for [Montycat](https://montygovernance.com) — 
 ```dart
 // Search your data by MEANING — no external APIs, no separate vector database.
 // (already ON by default in the montycat-semantic server edition)
-final hits = await production.semanticSearchGetValues('Show all Bluetooth devices', limit: [0, 5]);
+final hits = await production.searchValues(query: 'Show all Bluetooth devices', limit: [0, 5]);
 // → [{__key__: 123..., __score__: 0.78, __value__: { name: 'Wireless Headphones' }}]
 ```
 
@@ -210,13 +210,11 @@ Future<void> main() async {
 }
 ```
 
-## 🧠 AI-Native Semantic Search — Vector Search Built Into Your Database
+## 🧠 Ranked Search — Semantic, BM25 Keyword, and Hybrid
 
-**Stop bolting a separate vector database onto your stack.** Montycat ranks your data by
-*meaning*, not keywords — an embedded, on-device vector-embedding engine turns every write
-into a searchable vector automatically. It's the retrieval layer for **RAG pipelines, AI
-agents, semantic search, recommendation engines, and LLM-powered apps** — with **zero
-external APIs, zero API keys, and zero extra infrastructure.**
+Montycat provides semantic vector search, persistent BM25 keyword search, and
+hybrid ranking in one database. Use `lookup*` for exact structured matching;
+use `searchKeys` or `searchValues` for relevance-ranked retrieval.
 
 - 🔎 **Semantic / vector search** — kNN similarity over on-device embeddings, not brittle keyword matches.
 - 🤖 **Built for AI** — RAG, semantic retrieval, AI agents, recommendations, dedup, clustering.
@@ -241,11 +239,24 @@ in the background as data is written (the embedding model is downloaded on deman
 // Rank stored items by meaning — two flavors:
 //   getValues → each hit is {__key__, __score__, __value__}
 //   getKeys   → each hit is {__key__, __score__} (lighter; fetch a page later with getBulk)
-final hits = await production.semanticSearchGetValues('bulk order of blue widgets', limit: [0, 5]);
-final keys = await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5]);
+final hits = await production.searchValues(
+  query: 'bulk order of blue widgets',
+  mode: SearchMode.hybrid,
+  limit: [0, 5],
+);
+final keys = await production.searchKeys(
+  query: 'blue widgets',
+  mode: SearchMode.keyword,
+  limit: [0, 5],
+);
 
 // Optionally drop weak matches by cosine similarity (range [-1, 1]).
-final strong = await production.semanticSearchGetKeys('bulk order of blue widgets', limit: [0, 5], minScore: 0.35);
+final strong = await production.searchKeys(
+  query: 'bulk order of blue widgets',
+  mode: SearchMode.semantic,
+  limit: [0, 5],
+  minScore: 0.35,
+);
 
 // Read back the actual model and backfill state.
 final semantic = await engine.getSemanticStatus(
@@ -274,23 +285,32 @@ await engine.reembedSemanticSearch(
 await engine.disableSemanticSearch();
 ```
 
-### Hybrid semantic search
+### Search modes and metadata filters
 
-Combine meaning-based ranking with structured metadata constraints. The filter
-is a hard AND pre-filter, not a relevance boost; it supports the same criteria
-shape as `lookupKeysWhere`.
+`semantic` ranks by vector similarity, `keyword` uses BM25, and `hybrid`
+combines both rankings with reciprocal-rank fusion. Optional `filters` are an
+exact hard pre-filter and do not contribute to relevance.
+
+`__score__` is cosine similarity in semantic mode, raw BM25 relevance in
+keyword mode, and a normalized `[0, 1]` RRF score in hybrid mode. Keyword
+scores have no fixed upper bound, so compare scores only within the same query
+and search mode. A hybrid score near `1.0` means strong agreement between both
+rankings; a top result found by only one branch is around `0.5`. `minScore`
+filters only the semantic branch.
 
 ```dart
-final matchingKeys = await production.semanticSearchGetKeysWhere(
-  'astronomy and outer space',
-  {'category': 'space'},
+final matchingKeys = await production.searchKeys(
+  query: 'astronomy and outer space',
+  mode: SearchMode.hybrid,
+  filters: {'category': 'space'},
   limit: [0, 5],
   minScore: 0.35,
 );
 
-final matchingValues = await production.semanticSearchGetValuesWhere(
-  'astronomy and outer space',
-  {'category': 'space'},
+final matchingValues = await production.searchValues(
+  query: 'astronomy and outer space',
+  mode: SearchMode.hybrid,
+  filters: {'category': 'space'},
   limit: [0, 5],
 );
 // key hits:    {__key__, __score__}
@@ -331,8 +351,9 @@ await production.insertBulk(
 );
 
 // Searching: pass a query vector; the query string may be empty.
-final hits = await production.semanticSearchGetValues(
-  '',
+final hits = await production.searchValues(
+  query: '',
+  mode: SearchMode.semantic,
   vector: myQueryEmbedding,
   limit: [0, 10],
 );

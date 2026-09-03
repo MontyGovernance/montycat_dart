@@ -45,6 +45,15 @@ enum SemanticModel {
   final String wireName;
 }
 
+/// Ranking strategy for semantic, BM25 keyword, or hybrid search.
+enum SearchMode {
+  semantic,
+  keyword,
+  hybrid;
+
+  String get command => '${name}_search';
+}
+
 /// Serialization formats accepted by policy manifest commands.
 enum PolicyFormat {
   json('json'),

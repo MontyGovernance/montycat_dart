@@ -10,6 +10,7 @@ export 'src/tools.dart'
         PolicyCapability,
         PolicyKeyspaceType,
         SemanticModel,
+        SearchMode,
         PolicyFormat,
         ResultOrder;
 export 'src/semantic.dart'
