@@ -25,6 +25,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'tls.dart' show TlsSettings;
 
 /// How many idle connections to keep, and how long to keep them.
 ///
@@ -238,9 +239,14 @@ class ConnectionPool {
 // connection to the same address are not interchangeable, and `useTls` is
 // mutable on the engine after construction — so the key must be read at request
 // time, never cached at connectEngine time.
+//
+// Trust is part of it too, and for the same reason: a connection verified
+// against a pinned certificate must never be handed to a caller that asked for
+// different trust, or for none at all.
 final Map<String, ConnectionPool> _pools = <String, ConnectionPool>{};
 
-String _keyFor(String host, int port, bool useTls) => '$host:$port:$useTls';
+String _keyFor(String host, int port, bool useTls, TlsSettings? tls) =>
+    '$host:$port:$useTls:${tls?.poolKey() ?? ''}';
 
 /// The pool for this target, creating it on first use.
 ///
@@ -250,11 +256,12 @@ ConnectionPool? getPool(
   String host,
   int port,
   bool useTls,
+  TlsSettings? tls,
   PoolConfig? config,
 ) {
   if (config == null) return null;
   return _pools.putIfAbsent(
-    _keyFor(host, port, useTls),
+    _keyFor(host, port, useTls, tls),
     () => ConnectionPool(config),
   );
 }

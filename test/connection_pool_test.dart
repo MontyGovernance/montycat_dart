@@ -311,9 +311,9 @@ void main() {
     // read at request time rather than cached at connectEngine time.
     await closeAllPools();
     const config = PoolConfig();
-    final plain = getPool('127.0.0.1', 21210, false, config);
-    final secure = getPool('127.0.0.1', 21210, true, config);
-    final plainAgain = getPool('127.0.0.1', 21210, false, config);
+    final plain = getPool('127.0.0.1', 21210, false, null, config);
+    final secure = getPool('127.0.0.1', 21210, true, null, config);
+    final plainAgain = getPool('127.0.0.1', 21210, false, null, config);
 
     expect(
       identical(plain, secure),
@@ -327,7 +327,28 @@ void main() {
     );
   });
 
+  test('trust is part of the registry key too', () async {
+    // Not merely on/off: a connection verified against a pinned certificate
+    // must never be handed to a caller that asked for no verification.
+    await closeAllPools();
+    const config = PoolConfig();
+    final unverified = getPool('127.0.0.1', 21210, true, null, config);
+    final verified = getPool(
+      '127.0.0.1',
+      21210,
+      true,
+      TlsSettings(verification: true),
+      config,
+    );
+
+    expect(
+      identical(unverified, verified),
+      isFalse,
+      reason: 'a verified caller would reuse an unverified connection',
+    );
+  });
+
   test('no config means no pool', () {
-    expect(getPool('127.0.0.1', 21210, false, null), isNull);
+    expect(getPool('127.0.0.1', 21210, false, null, null), isNull);
   });
 }

@@ -1,3 +1,47 @@
+## 1.2.4 - 2026-09-10
+
+### Added
+
+- **Optional certificate verification.** `useTls` encrypts but does not check
+  who answers, which is where this client has always stood; an active attacker
+  in the path could present its own certificate and read every request,
+  credentials included. `Engine` now accepts three new arguments:
+
+  - `certificatePath` — the engine's certificate, copied to the client host.
+    The certificate presented must match it byte for byte.
+  - `certificateFingerprint` — its SHA-256 digest, for deployments that would
+    rather pass a string than ship a file. Read one with
+    `openssl x509 -in server.crt -noout -fingerprint -sha256`.
+  - `certificateVerification` — verify against the platform trust store with
+    ordinary hostname checking, for an engine behind a proxy holding a
+    CA-issued certificate.
+
+  Either pin implies verification, so one argument says one thing. Both skip
+  hostname checking: the engine's self-signed certificate names only
+  `localhost`, `127.0.0.1` and `::1` unless regenerated with
+  `init-self-tls dns/ip`, and comparing the certificate already answers
+  identity exactly. The check runs on the pooled and per-request paths alike,
+  and fails before any request byte is written — returned as a
+  `TlsVerificationException`, the way this client returns every other
+  connection error, naming the fingerprint that arrived.
+
+  `TlsSettings` and `TlsVerificationException` are exported.
+
+- `Engine.fromUri` accepts `useTls` and the verification arguments, rather than
+  always starting in plaintext.
+
+### Changed
+
+- Connection pools are keyed by the whole TLS configuration rather than by an
+  on/off flag. A connection verified against a pinned certificate is never
+  handed to a caller that asked for different trust, or for none.
+
+### Unchanged
+
+- **`certificateVerification` defaults to off.** Existing TLS deployments keep
+  working exactly as before — turning verification on by default would break
+  every engine running its own self-signed certificate.
+
 ## 1.2.3 - 2026-09-02
 
 - Added exported `SearchMode`, `searchKeys`, and `searchValues`, with optional

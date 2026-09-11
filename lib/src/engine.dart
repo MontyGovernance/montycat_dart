@@ -1,5 +1,6 @@
 import 'utils.dart' show sendData;
 import 'pool.dart' show PoolConfig;
+import 'tls.dart' show TlsSettings;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -57,7 +58,19 @@ class Engine {
     this.store,
     this.useTls = false,
     this.pool,
-  });
+    bool? certificateVerification,
+    String? certificatePath,
+    String? certificateFingerprint,
+  }) : tls =
+           (certificateVerification == null &&
+                   certificatePath == null &&
+                   certificateFingerprint == null)
+               ? null
+               : TlsSettings(
+                 verification: certificateVerification,
+                 certificatePath: certificatePath,
+                 certificateFingerprint: certificateFingerprint,
+               );
 
   final String host;
   final int port;
@@ -65,6 +78,15 @@ class Engine {
   final String password;
   late String? store;
   late bool useTls;
+
+  /// What to require of the engine's certificate, or null to encrypt without
+  /// checking who answers — which is what [useTls] alone has always meant here.
+  ///
+  /// Verification is opt-in because turning it on by default would break every
+  /// deployment running the engine's own self-signed certificate. Set it with
+  /// the `certificatePath`, `certificateFingerprint` or `certificateVerification`
+  /// constructor arguments; see `TlsSettings` for which to reach for.
+  TlsSettings? tls;
 
   /// Enables connection pooling for request/response traffic, or `null` for
   /// connect-per-request.
@@ -91,7 +113,13 @@ class Engine {
   ///
   /// Throws a [FormatException] if the URI is invalid or missing required components.
   ///
-  factory Engine.fromUri(String uri) {
+  factory Engine.fromUri(
+    String uri, {
+    bool useTls = false,
+    bool? certificateVerification,
+    String? certificatePath,
+    String? certificateFingerprint,
+  }) {
     final parsed = Uri.parse(uri);
 
     if (parsed.scheme != 'montycat') {
@@ -120,7 +148,10 @@ class Engine {
       username: username,
       password: password,
       store: store,
-      useTls: false,
+      useTls: useTls,
+      certificateVerification: certificateVerification,
+      certificatePath: certificatePath,
+      certificateFingerprint: certificateFingerprint,
     );
   }
 
@@ -138,6 +169,7 @@ class Engine {
       port,
       queryBytes,
       useTls: useTls,
+      tls: tls,
       poolConfig: pool,
     );
   }

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'pool.dart' show PoolConfig, PooledConnection, getPool;
+import 'tls.dart' show TlsSettings;
 
 /// Handle for managing active subscriptions.
 /// Allows stopping the subscription and closing the socket.
@@ -34,6 +35,9 @@ class SubscriptionHandle {
 ///   - [port]: The server's port.
 ///   - [query]: The serialized data to be sent as Uint8List.
 ///   - [callback]: An optional function to handle subscription responses.
+///   - [tls]: What to require of the engine's certificate. Null — the default —
+///     encrypts without checking who answers, which is what [useTls] has always
+///     meant on this client.
 ///
 /// Returns:
 ///   A Future containing the server's parsed response for non-subscribe queries,
@@ -49,6 +53,7 @@ Future<dynamic> sendData(
   Uint8List query, {
   void Function(dynamic)? callback,
   bool useTls = false,
+  TlsSettings? tls,
   PoolConfig? poolConfig,
 }) async {
   // A subscription is the call that supplies a callback — never inferred from
@@ -59,25 +64,11 @@ Future<dynamic> sendData(
   // Subscriptions are never pooled (contract §5): they are long-lived, stream
   // many responses to one request, and live on the `port + 1` subscription port.
   if (callback == null && poolConfig != null) {
-    return _pooledRequest(host, port, query, useTls, poolConfig);
+    return _pooledRequest(host, port, query, useTls, tls, poolConfig);
   }
 
   try {
-    late Socket socket;
-
-    if (useTls) {
-      socket = await SecureSocket.connect(
-        host,
-        port,
-        onBadCertificate: (X509Certificate cert) => true, // Accept self-signed
-      ).timeout(const Duration(seconds: 10));
-    } else {
-      socket = await Socket.connect(
-        host,
-        port,
-        timeout: const Duration(seconds: 10),
-      );
-    }
+    final Socket socket = await _openSocket(host, port, useTls, tls);
 
     final bool isSubscribe = callback != null;
 
@@ -124,20 +115,54 @@ Future<dynamic> sendData(
 }
 
 /// Open one connection and wrap it with its framing chain for pooling.
-Future<PooledConnection> _openPooled(String host, int port, bool useTls) async {
-  final Socket socket =
-      useTls
-          ? await SecureSocket.connect(
-            host,
-            port,
-            onBadCertificate: (X509Certificate cert) => true,
-          ).timeout(const Duration(seconds: 10))
-          : await Socket.connect(
-            host,
-            port,
-            timeout: const Duration(seconds: 10),
-          );
-  return PooledConnection(socket);
+Future<PooledConnection> _openPooled(
+  String host,
+  int port,
+  bool useTls,
+  TlsSettings? tls,
+) async {
+  return PooledConnection(await _openSocket(host, port, useTls, tls));
+}
+
+/// Open one connection, applying whatever trust requirements were configured.
+///
+/// Both the pooled and per-request paths come through here, so a pin cannot be
+/// enforced on one and forgotten on the other.
+Future<Socket> _openSocket(
+  String host,
+  int port,
+  bool useTls,
+  TlsSettings? tls,
+) async {
+  tls?.assertUsableWith(useTls);
+
+  if (!useTls) {
+    return await Socket.connect(host, port, timeout: const Duration(seconds: 10));
+  }
+
+  // `onBadCertificate` fires only when the platform's own check fails, so it
+  // cannot be where a pin is enforced: a certificate signed by a real CA would
+  // pass that check and never reach the callback, pin or no pin. Accept here,
+  // then compare the certificate that actually arrived.
+  final SecureSocket socket = await SecureSocket.connect(
+    host,
+    port,
+    onBadCertificate:
+        tls != null && tls.defersToPlatform
+            ? null
+            : (X509Certificate certificate) => true,
+  ).timeout(const Duration(seconds: 10));
+
+  try {
+    tls?.verifyPeer(socket.peerCertificate);
+  } catch (_) {
+    // Closed before a single request byte reaches a connection that failed
+    // the check.
+    socket.destroy();
+    rethrow;
+  }
+
+  return socket;
 }
 
 /// Request/response over a pooled connection.
@@ -149,12 +174,13 @@ Future<dynamic> _pooledRequest(
   int port,
   Uint8List query,
   bool useTls,
+  TlsSettings? tls,
   PoolConfig poolConfig,
 ) async {
   // The key is read here, at request time. `useTls` is mutable on the engine
   // after construction, so caching it at connectEngine time would let a TLS
   // engine reuse a plaintext connection.
-  final pool = getPool(host, port, useTls, poolConfig)!;
+  final pool = getPool(host, port, useTls, tls, poolConfig)!;
 
   final leased = await pool.checkout();
   if (leased != null) {
@@ -175,7 +201,7 @@ Future<dynamic> _pooledRequest(
 
   PooledConnection connection;
   try {
-    connection = await _openPooled(host, port, useTls);
+    connection = await _openPooled(host, port, useTls, tls);
   } catch (e) {
     print("Connection error: $e (address: $host, port: $port)");
     return e;

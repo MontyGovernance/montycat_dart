@@ -500,14 +500,67 @@ final engine = Engine(
   useTls: true,
 );
 
-// Engine.fromUri parses credentials but always starts in plaintext — opt in after:
+// Engine.fromUri defaults to plaintext; pass useTls: true, or flip it after:
 final fromUri = Engine.fromUri('montycat://USER:12345@127.0.0.1:21210/Company')
   ..useTls = true;
 ```
 
-> **Note.** The client accepts self-signed certificates, which is convenient for local
-> and internal deployments but means the server identity is not verified. Terminate TLS
-> at a trusted proxy if you need certificate pinning.
+On its own that encrypts the connection without checking who is on the other end,
+which is where this client has always stood. Encryption without verification stops
+passive eavesdropping but not an active attacker: anything that can sit in the path
+can present its own certificate and read or alter every request, credentials included.
+
+### Verifying the engine
+
+Verification is opt-in, and takes whichever form of trust material you have.
+
+**The engine's certificate, copied to the client host.** The certificate the engine
+presents must match this file exactly:
+
+```dart
+final engine = Engine(
+  // ...
+  useTls: true,
+  certificatePath: '/etc/montycat/server.crt',
+);
+```
+
+**Its SHA-256 fingerprint**, when passing a string is easier than shipping a file —
+a container image, an environment variable, a secrets manager:
+
+```sh
+openssl x509 -in server.crt -noout -fingerprint -sha256
+```
+
+```dart
+final engine = Engine(
+  // ...
+  useTls: true,
+  certificateFingerprint: Platform.environment['MONTYCAT_CERT_FINGERPRINT'],
+);
+```
+
+Either one implies verification — no second argument needed. Both compare the
+certificate byte for byte and skip hostname checking, because the engine's
+self-signed certificate carries only `localhost`, `127.0.0.1` and `::1` as subject
+alternative names unless it was regenerated with `init-self-tls dns/ip`. The
+comparison already answers the question a hostname check is a proxy for.
+
+**A certificate from a real CA**, for an engine behind a terminating proxy — no pin,
+so the platform trust store and ordinary hostname checking apply:
+
+```dart
+final engine = Engine(/* ... */ useTls: true, certificateVerification: true);
+```
+
+A certificate that does not match fails before any request byte is written. Following
+this client's convention, the failure is *returned* as a `TlsVerificationException`
+rather than thrown, the same way every other connection error is here — and it names
+the fingerprint that actually arrived, so a regenerated certificate is a one-line fix.
+
+> **Note.** `certificateVerification` is off by default. Turning it on by default
+> would break every deployment using the engine's self-signed certificate, so the
+> choice is yours to make explicitly.
 
 ## 👥 Owners & Access
 
