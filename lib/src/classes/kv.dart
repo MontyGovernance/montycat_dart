@@ -115,8 +115,8 @@ abstract class KV {
     // keyspace must require exactly what its engine was told to require.
     tls = engine.tls;
     // Only the *config* is copied. The pool itself lives in a library-level
-    // registry keyed by (host, port, useTls), so every keyspace instance
-    // pointing at one server shares a single pool — important here because
+    // registry keyed by endpoint and TLS trust configuration, so keyspaces
+    // using the same settings share a single pool — important here because
     // keyspace state is per-instance, and a Flutter app building one per screen
     // or per rebuild would otherwise create a pool per instance.
     pool = engine.pool;
@@ -681,6 +681,8 @@ abstract class KV {
   /// ```
   ///
   /// Return relevance-ranked keys using semantic, BM25, or hybrid search.
+  /// [minScore] filters the final mode score before pagination: cosine for
+  /// semantic, BM25 for keyword, and fused RRF for hybrid search.
   Future<dynamic> searchKeys({
     required String query,
     SearchMode mode = SearchMode.semantic,
@@ -703,6 +705,8 @@ abstract class KV {
   }
 
   /// Return relevance-ranked values using semantic, BM25, or hybrid search.
+  /// [minScore] filters the final mode score before pagination: cosine for
+  /// semantic, BM25 for keyword, and fused RRF for hybrid search.
   Future<dynamic> searchValues({
     required String query,
     SearchMode mode = SearchMode.semantic,

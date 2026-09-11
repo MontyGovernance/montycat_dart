@@ -4,7 +4,7 @@
 /// `montycat_semantic/CLIENT_CONNECTION_POOLING_CONTRACT.md`. The rules that
 /// shape this library:
 ///
-/// - **§3** — pooling by `(host, port, tls)` is safe: credentials travel in
+/// - **§3** — pooling by endpoint and TLS trust configuration is safe: credentials travel in
 ///   every request payload and the engine re-authenticates per request, so a
 ///   pooled connection carries no identity and may serve different users.
 /// - **§4** — never replay a request after a read failure; the engine may have
@@ -190,7 +190,7 @@ class _IdleEntry {
   _IdleEntry(this.connection, this.idleSince);
 }
 
-/// A bounded set of idle connections for one `(host, port, useTls)` target.
+/// A bounded set of idle connections for one endpoint and TLS trust configuration.
 class ConnectionPool {
   final PoolConfig config;
   final List<_IdleEntry> _idle = <_IdleEntry>[];

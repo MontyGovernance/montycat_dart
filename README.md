@@ -264,6 +264,9 @@ final semantic = await engine.getSemanticStatus(
   keyspace: 'products',
 );
 final productsStatus = semantic.keyspace('catalog', 'products');
+// After globally re-enabling semantic search, wait until
+// semantic.reloading is false before searching retained indexes.
+// semantic.indexing reports live and backfill queue depths.
 
 // Enable an unenrolled keyspace with an explicit model.
 await engine.enableSemanticSearch(
@@ -296,7 +299,8 @@ keyword mode, and a normalized `[0, 1]` RRF score in hybrid mode. Keyword
 scores have no fixed upper bound, so compare scores only within the same query
 and search mode. A hybrid score near `1.0` means strong agreement between both
 rankings; a top result found by only one branch is around `0.5`. `minScore`
-filters only the semantic branch.
+filters the final selected mode score before pagination. In hybrid mode this
+means the fused RRF score; keyword-only fallback hits are filtered too.
 
 ```dart
 final matchingKeys = await production.searchKeys(
@@ -431,11 +435,11 @@ Tune it if you need to:
 pool: const PoolConfig(maxIdle: 4, idleTimeout: Duration(seconds: 15)),  // defaults: 8, 30s
 ```
 
-**Pools are shared per `(host, port, useTls)`.** They live in a library-level registry, not
+**Pools are shared per endpoint and TLS trust configuration.** They live in a library-level registry, not
 on the `Engine`. That matters more here than elsewhere: keyspace state is *per-instance*, so
 a Flutter app creating a keyspace per screen or per rebuild would otherwise get a pool per
-instance. The key is read at request time, so flipping `useTls` after `connectEngine` cannot
-reuse a plaintext connection for a TLS engine.
+instance. The key is read at request time, so plaintext, TLS, and connections using
+different certificate pins are never reused interchangeably.
 
 ### On Flutter and mobile
 
@@ -540,8 +544,9 @@ final engine = Engine(
 );
 ```
 
-Either one implies verification — no second argument needed. Both compare the
-certificate byte for byte and skip hostname checking, because the engine's
+Either one implies verification — no second argument needed. Both pin the same leaf
+certificate identity: a certificate file compares parsed DER bytes, while a fingerprint
+compares its SHA-256 digest. Pinning skips hostname checking because the engine's
 self-signed certificate carries only `localhost`, `127.0.0.1` and `::1` as subject
 alternative names unless it was regenerated with `init-self-tls dns/ip`. The
 comparison already answers the question a hostname check is a proxy for.

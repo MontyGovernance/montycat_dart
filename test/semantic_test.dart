@@ -5,6 +5,12 @@ void main() {
   test('parses semantic status and keyspace readback', () {
     final status = SemanticStatus.fromJson({
       'globally_enabled': true,
+      'reloading': true,
+      'indexing': {
+        'live_queue': 3,
+        'backfill_queue': 2,
+        'backfill_in_flight': 1,
+      },
       'default_model': 'bge-small',
       'default_field': null,
       'keyspaces': {
@@ -20,6 +26,10 @@ void main() {
     });
     final keyspace = status.keyspace('catalog', 'products');
     expect(status.globallyEnabled, isTrue);
+    expect(status.reloading, isTrue);
+    expect(status.indexing.liveQueue, 3);
+    expect(status.indexing.backfillQueue, 2);
+    expect(status.indexing.backfillInFlight, 1);
     expect(status.defaultModel, 'bge-small');
     expect(keyspace?.model, 'bge-base');
     expect(keyspace?.dimensions, 768);
