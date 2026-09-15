@@ -8,6 +8,7 @@
 /// checking the wrong question to ask.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -33,7 +34,10 @@ String fingerprintOf(String path) {
 }
 
 /// One TLS listener answering one JSON line, the way the engine does.
-Future<SecureServerSocket> engineLikeListener() async {
+Future<SecureServerSocket> engineLikeListener({
+  void Function()? onDone,
+  void Function(Object error)? onError,
+}) async {
   final SecurityContext context =
       SecurityContext()
         ..useCertificateChain(certificate)
@@ -52,7 +56,8 @@ Future<SecureServerSocket> engineLikeListener() async {
           utf8.encode('{"status":true,"payload":"ok","error":null}\n'),
         );
       },
-      onError: (_) {},
+      onError: onError,
+      onDone: onDone,
       cancelOnError: true,
     );
   }, onError: (_) {});
@@ -116,7 +121,10 @@ void main() {
       // operator pointing at a LAN address would fail hostname verification
       // with nothing actually wrong, and the comparison has already answered
       // the question that matters.
-      expect(TlsSettings(certificatePath: certificate).defersToPlatform, isFalse);
+      expect(
+        TlsSettings(certificatePath: certificate).defersToPlatform,
+        isFalse,
+      );
     });
 
     test('a fingerprint is accepted in the shape openssl prints it', () {
@@ -140,7 +148,12 @@ void main() {
     });
 
     test('a fingerprint that cannot be one is refused', () {
-      for (final String value in ['', 'not-a-fingerprint', 'ab99cf', 'z' * 64]) {
+      for (final String value in [
+        '',
+        'not-a-fingerprint',
+        'ab99cf',
+        'z' * 64,
+      ]) {
         expect(
           () => TlsSettings(certificateFingerprint: value),
           throwsA(isA<ArgumentError>()),
@@ -225,6 +238,36 @@ void main() {
       expect((response as Map)['status'], isTrue);
     });
 
+    test('idle pool eviction closes TLS without an unexpected EOF', () async {
+      await server.close();
+      final closed = Completer<void>();
+      final errors = <Object>[];
+      var accepts = 0;
+      server = await engineLikeListener(
+        onDone: () {
+          accepts++;
+          if (accepts == 1 && !closed.isCompleted) closed.complete();
+        },
+        onError: errors.add,
+      );
+      final engine = Engine(
+        host: '127.0.0.1',
+        port: server.port,
+        username: 'user',
+        password: 'password',
+        useTls: true,
+        certificatePath: certificate,
+        pool: const PoolConfig(idleTimeout: Duration(milliseconds: 20)),
+      );
+
+      expect(await engine.listOwners(), isA<Map>());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(await engine.listOwners(), isA<Map>());
+      await closed.future.timeout(const Duration(seconds: 2));
+
+      expect(errors, isEmpty);
+    });
+
     test('a different certificate is refused', () async {
       // Errors are returned rather than thrown on this client, which is what
       // every other connection failure does here too.
@@ -268,17 +311,22 @@ void main() {
       expect(bad, isA<TlsVerificationException>());
     });
 
-    test('an unverified connection still reaches a self-signed engine', () async {
-      // The default path, and the reason it is still the default.
-      final response = await sendData(
-        '127.0.0.1',
-        server.port,
-        Uint8List.fromList(utf8.encode('{"raw":["version"],"credentials":[]}')),
-        useTls: true,
-      );
+    test(
+      'an unverified connection still reaches a self-signed engine',
+      () async {
+        // The default path, and the reason it is still the default.
+        final response = await sendData(
+          '127.0.0.1',
+          server.port,
+          Uint8List.fromList(
+            utf8.encode('{"raw":["version"],"credentials":[]}'),
+          ),
+          useTls: true,
+        );
 
-      expect((response as Map)['status'], isTrue);
-    });
+        expect((response as Map)['status'], isTrue);
+      },
+    );
 
     test('a pin is enforced on pooled connections too', () async {
       // Two code paths open sockets here. A pin enforced on one and forgotten

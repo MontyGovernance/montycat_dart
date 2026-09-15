@@ -168,12 +168,16 @@ class PooledConnection {
   Future<void> close() async {
     _dead = true;
     try {
-      await _subscription.cancel();
+      // SecureSocket.close() sends TLS close_notify. Destroying the transport
+      // directly makes rustls report an unexpected EOF even when the request
+      // completed successfully. Bound graceful shutdown so a broken peer
+      // cannot stall pool eviction or application shutdown.
+      await socket.close().timeout(const Duration(seconds: 1));
     } catch (_) {
-      /* already gone */
+      socket.destroy();
     }
     try {
-      socket.destroy();
+      await _subscription.cancel();
     } catch (_) {
       /* already gone */
     }
