@@ -190,6 +190,39 @@ void main() {
       ),
       throwsException,
     );
+
+    final updateValue = {
+      'schema': 'Event',
+      'timestamps': {'modifiedAt': '2026-09-15 19:09:09'},
+    };
+    final updateQuery =
+        jsonDecode(
+              utf8.decode(
+                convertToBinaryQuery(
+                  cls: QueryContext(),
+                  command: 'update_bulk',
+                  bulkKeysValues: {'7': updateValue},
+                ),
+              ),
+            )
+            as Map<String, dynamic>;
+    expect(updateQuery['schema'], 'Event');
+    expect(jsonDecode(updateQuery['bulk_keys_values']['7']), {
+      'timestamps': {'modifiedAt': '2026-09-15 19:09:09'},
+    });
+    expect(updateValue['schema'], 'Event');
+
+    expect(
+      () => convertToBinaryQuery(
+        cls: QueryContext(),
+        command: 'update_bulk',
+        bulkKeysValues: {
+          '1': {'schema': 'One'},
+          '2': {'schema': 'Two'},
+        },
+      ),
+      throwsException,
+    );
   });
 
   test('KV rejects incomplete requests before networking', () async {

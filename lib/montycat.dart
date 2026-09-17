@@ -14,8 +14,13 @@ export 'src/tools.dart'
         PolicyFormat,
         ResultOrder;
 export 'src/semantic.dart'
-    show SemanticKeyspaceStatus, SemanticStatus, SemanticReembedResult;
+    show
+        SemanticIndexingStatus,
+        SemanticKeyspaceStatus,
+        SemanticStatus,
+        SemanticReembedResult;
 export 'src/classes/inmemory.dart' show KeyspaceInMemory;
 export 'src/classes/persistent.dart' show KeyspacePersistent;
 export 'src/utils.dart' show SubscriptionHandle;
+export 'src/tls.dart' show TlsSettings, TlsVerificationException;
 export 'src/pool.dart' show PoolConfig, closeAllPools;

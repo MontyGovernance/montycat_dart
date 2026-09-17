@@ -1,5 +1,6 @@
 import 'utils.dart' show sendData;
 import 'pool.dart' show PoolConfig;
+import 'tls.dart' show TlsSettings;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -57,7 +58,19 @@ class Engine {
     this.store,
     this.useTls = false,
     this.pool,
-  });
+    bool? certificateVerification,
+    String? certificatePath,
+    String? certificateFingerprint,
+  }) : tls =
+           (certificateVerification == null &&
+                   certificatePath == null &&
+                   certificateFingerprint == null)
+               ? null
+               : TlsSettings(
+                 verification: certificateVerification,
+                 certificatePath: certificatePath,
+                 certificateFingerprint: certificateFingerprint,
+               );
 
   final String host;
   final int port;
@@ -66,11 +79,20 @@ class Engine {
   late String? store;
   late bool useTls;
 
+  /// What to require of the engine's certificate, or null to encrypt without
+  /// checking who answers — which is what [useTls] alone has always meant here.
+  ///
+  /// Verification is opt-in because turning it on by default would break every
+  /// deployment running the engine's own self-signed certificate. Set it with
+  /// the `certificatePath`, `certificateFingerprint` or `certificateVerification`
+  /// constructor arguments; see `TlsSettings` for which to reach for.
+  TlsSettings? tls;
+
   /// Enables connection pooling for request/response traffic, or `null` for
   /// connect-per-request.
   ///
-  /// Pools live in a library-level registry keyed by `(host, port, useTls)`, so
-  /// every keyspace pointing at one server shares a single pool. Subscriptions
+  /// Pools live in a library-level registry keyed by endpoint and TLS trust
+  /// configuration, so keyspaces using the same settings share a single pool. Subscriptions
   /// are never pooled. Call [closeAllPools] before exit, and from a
   /// connectivity listener on mobile — switching Wi-Fi to cellular invalidates
   /// every pooled connection.
@@ -91,7 +113,13 @@ class Engine {
   ///
   /// Throws a [FormatException] if the URI is invalid or missing required components.
   ///
-  factory Engine.fromUri(String uri) {
+  factory Engine.fromUri(
+    String uri, {
+    bool useTls = false,
+    bool? certificateVerification,
+    String? certificatePath,
+    String? certificateFingerprint,
+  }) {
     final parsed = Uri.parse(uri);
 
     if (parsed.scheme != 'montycat') {
@@ -120,7 +148,10 @@ class Engine {
       username: username,
       password: password,
       store: store,
-      useTls: false,
+      useTls: useTls,
+      certificateVerification: certificateVerification,
+      certificatePath: certificatePath,
+      certificateFingerprint: certificateFingerprint,
     );
   }
 
@@ -138,6 +169,7 @@ class Engine {
       port,
       queryBytes,
       useTls: useTls,
+      tls: tls,
       poolConfig: pool,
     );
   }
@@ -319,6 +351,11 @@ class Engine {
   }
 
   /// Returns the server's actual semantic settings and enrollment state.
+  ///
+  /// [SemanticStatus.reloading] is true while retained indexes reopen after
+  /// global semantic search is enabled; retry semantic searches and vector
+  /// uploads until it is false. [SemanticStatus.indexing] reports live and
+  /// backfill queue depths.
   Future<SemanticStatus> getSemanticStatus({
     String? store,
     String? keyspace,
@@ -631,10 +668,10 @@ class Engine {
 
   /// Enables the DB-wide "wait for index" default.
   ///
-  /// Writes block until their secondary indexes are updated before returning,
-  /// so a write is immediately visible to index-backed reads (e.g.
-  /// [KV.lookupValuesWhere]) at the cost of higher write latency. Requires
-  /// superowner credentials.
+  /// Writes block until their secondary indexes and already-submitted semantic
+  /// live work are updated before returning, so a write is immediately visible
+  /// to index-backed reads, including keyword and hybrid search, at the cost of
+  /// higher write latency. Requires superowner credentials.
   ///
   Future<dynamic> enableWaitForIndex() async {
     return await _executeQuery(["enable-wait-for-index"]);

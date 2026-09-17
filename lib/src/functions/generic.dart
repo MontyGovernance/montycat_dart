@@ -125,11 +125,27 @@ Uint8List convertToBinaryQuery({
   }
 
   if (bulkKeysValues.isNotEmpty) {
+    final updateSchemas = <String?>[];
     bulkKeysValues = {
       for (var entry in bulkKeysValues.entries)
         if (entry.value is Map<String, dynamic>)
-          entry.key: modifyPointers(entry.value),
+          entry.key:
+              (() {
+                final item = Map<String, dynamic>.from(entry.value);
+                updateSchemas.add(item.remove('schema') as String?);
+                return modifyPointers(item);
+              })(),
     };
+    final uniqueUpdateSchemas = updateSchemas.toSet();
+    if (uniqueUpdateSchemas.length > 1) {
+      throw Exception('Bulk values should fit only one schema');
+    }
+    if (updateSchemas.isNotEmpty && updateSchemas.first != null) {
+      if (schema != null && schema != updateSchemas.first) {
+        throw Exception('Bulk values should fit only one schema');
+      }
+      schema = updateSchemas.first;
+    }
   }
 
   if (bulkKeys.isNotEmpty) {
@@ -173,8 +189,8 @@ Uint8List convertToBinaryQuery({
     'pointers_metadata': pointersMetadata,
   };
 
-  // Only `semantic_search` honors min_score; omit it otherwise so the wire is
-  // unchanged for existing commands (the server defaults the field to null).
+  // Search commands apply min_score to their final mode score before
+  // pagination; omit it when unset so existing wire payloads stay unchanged.
   if (minScore != null) {
     queryDict['min_score'] = minScore;
   }

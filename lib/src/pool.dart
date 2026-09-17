@@ -4,7 +4,7 @@
 /// `montycat_semantic/CLIENT_CONNECTION_POOLING_CONTRACT.md`. The rules that
 /// shape this library:
 ///
-/// - **§3** — pooling by `(host, port, tls)` is safe: credentials travel in
+/// - **§3** — pooling by endpoint and TLS trust configuration is safe: credentials travel in
 ///   every request payload and the engine re-authenticates per request, so a
 ///   pooled connection carries no identity and may serve different users.
 /// - **§4** — never replay a request after a read failure; the engine may have
@@ -25,6 +25,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'tls.dart' show TlsSettings;
 
 /// How many idle connections to keep, and how long to keep them.
 ///
@@ -167,12 +168,16 @@ class PooledConnection {
   Future<void> close() async {
     _dead = true;
     try {
-      await _subscription.cancel();
+      // SecureSocket.close() sends TLS close_notify. Destroying the transport
+      // directly makes rustls report an unexpected EOF even when the request
+      // completed successfully. Bound graceful shutdown so a broken peer
+      // cannot stall pool eviction or application shutdown.
+      await socket.close().timeout(const Duration(seconds: 1));
     } catch (_) {
-      /* already gone */
+      socket.destroy();
     }
     try {
-      socket.destroy();
+      await _subscription.cancel();
     } catch (_) {
       /* already gone */
     }
@@ -189,7 +194,7 @@ class _IdleEntry {
   _IdleEntry(this.connection, this.idleSince);
 }
 
-/// A bounded set of idle connections for one `(host, port, useTls)` target.
+/// A bounded set of idle connections for one endpoint and TLS trust configuration.
 class ConnectionPool {
   final PoolConfig config;
   final List<_IdleEntry> _idle = <_IdleEntry>[];
@@ -238,9 +243,14 @@ class ConnectionPool {
 // connection to the same address are not interchangeable, and `useTls` is
 // mutable on the engine after construction — so the key must be read at request
 // time, never cached at connectEngine time.
+//
+// Trust is part of it too, and for the same reason: a connection verified
+// against a pinned certificate must never be handed to a caller that asked for
+// different trust, or for none at all.
 final Map<String, ConnectionPool> _pools = <String, ConnectionPool>{};
 
-String _keyFor(String host, int port, bool useTls) => '$host:$port:$useTls';
+String _keyFor(String host, int port, bool useTls, TlsSettings? tls) =>
+    '$host:$port:$useTls:${tls?.poolKey() ?? ''}';
 
 /// The pool for this target, creating it on first use.
 ///
@@ -250,11 +260,12 @@ ConnectionPool? getPool(
   String host,
   int port,
   bool useTls,
+  TlsSettings? tls,
   PoolConfig? config,
 ) {
   if (config == null) return null;
   return _pools.putIfAbsent(
-    _keyFor(host, port, useTls),
+    _keyFor(host, port, useTls, tls),
     () => ConnectionPool(config),
   );
 }

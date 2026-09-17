@@ -74,7 +74,7 @@ Add `montycat` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat: ^1.1.0
+  montycat: ^1.2.4
 ```
 
 Then fetch packages:
@@ -264,6 +264,9 @@ final semantic = await engine.getSemanticStatus(
   keyspace: 'products',
 );
 final productsStatus = semantic.keyspace('catalog', 'products');
+// After globally re-enabling semantic search, wait until
+// semantic.reloading is false before searching retained indexes.
+// semantic.indexing reports live and backfill queue depths.
 
 // Enable an unenrolled keyspace with an explicit model.
 await engine.enableSemanticSearch(
@@ -296,7 +299,8 @@ keyword mode, and a normalized `[0, 1]` RRF score in hybrid mode. Keyword
 scores have no fixed upper bound, so compare scores only within the same query
 and search mode. A hybrid score near `1.0` means strong agreement between both
 rankings; a top result found by only one branch is around `0.5`. `minScore`
-filters only the semantic branch.
+filters the final selected mode score before pagination. In hybrid mode this
+means the fused RRF score; keyword-only fallback hits are filtered too.
 
 ```dart
 final matchingKeys = await production.searchKeys(
@@ -362,6 +366,11 @@ final hits = await production.searchValues(
 `vector` is also accepted by `insertCustomKeyValue` and `updateValue`, and
 `updateBulk` takes `vectors` for numeric keys plus `customVectors` for custom
 keys. All four `semanticSearch*` methods accept a query vector.
+
+Serialized `Schema` values can be passed directly to `updateBulk`. Their
+`schema` entry is transported as request metadata rather than stored as a
+document field, while nested `timestamps` metadata remains intact. Every value
+in one bulk update must use the same schema.
 
 **Embedding-space compatibility is required.** Every supplied record vector and
 query vector must be produced by the model enrolled for that keyspace, including
@@ -431,11 +440,11 @@ Tune it if you need to:
 pool: const PoolConfig(maxIdle: 4, idleTimeout: Duration(seconds: 15)),  // defaults: 8, 30s
 ```
 
-**Pools are shared per `(host, port, useTls)`.** They live in a library-level registry, not
+**Pools are shared per endpoint and TLS trust configuration.** They live in a library-level registry, not
 on the `Engine`. That matters more here than elsewhere: keyspace state is *per-instance*, so
 a Flutter app creating a keyspace per screen or per rebuild would otherwise get a pool per
-instance. The key is read at request time, so flipping `useTls` after `connectEngine` cannot
-reuse a plaintext connection for a TLS engine.
+instance. The key is read at request time, so plaintext, TLS, and connections using
+different certificate pins are never reused interchangeably.
 
 ### On Flutter and mobile
 
@@ -500,14 +509,68 @@ final engine = Engine(
   useTls: true,
 );
 
-// Engine.fromUri parses credentials but always starts in plaintext — opt in after:
+// Engine.fromUri defaults to plaintext; pass useTls: true, or flip it after:
 final fromUri = Engine.fromUri('montycat://USER:12345@127.0.0.1:21210/Company')
   ..useTls = true;
 ```
 
-> **Note.** The client accepts self-signed certificates, which is convenient for local
-> and internal deployments but means the server identity is not verified. Terminate TLS
-> at a trusted proxy if you need certificate pinning.
+On its own that encrypts the connection without checking who is on the other end,
+which is where this client has always stood. Encryption without verification stops
+passive eavesdropping but not an active attacker: anything that can sit in the path
+can present its own certificate and read or alter every request, credentials included.
+
+### Verifying the engine
+
+Verification is opt-in, and takes whichever form of trust material you have.
+
+**The engine's certificate, copied to the client host.** The certificate the engine
+presents must match this file exactly:
+
+```dart
+final engine = Engine(
+  // ...
+  useTls: true,
+  certificatePath: '/etc/montycat/server.crt',
+);
+```
+
+**Its SHA-256 fingerprint**, when passing a string is easier than shipping a file —
+a container image, an environment variable, a secrets manager:
+
+```sh
+openssl x509 -in server.crt -noout -fingerprint -sha256
+```
+
+```dart
+final engine = Engine(
+  // ...
+  useTls: true,
+  certificateFingerprint: Platform.environment['MONTYCAT_CERT_FINGERPRINT'],
+);
+```
+
+Either one implies verification — no second argument needed. Both pin the same leaf
+certificate identity: a certificate file compares parsed DER bytes, while a fingerprint
+compares its SHA-256 digest. Pinning skips hostname checking because the engine's
+self-signed certificate carries only `localhost`, `127.0.0.1` and `::1` as subject
+alternative names unless it was regenerated with `init-self-tls dns/ip`. The
+comparison already answers the question a hostname check is a proxy for.
+
+**A certificate from a real CA**, for an engine behind a terminating proxy — no pin,
+so the platform trust store and ordinary hostname checking apply:
+
+```dart
+final engine = Engine(/* ... */ useTls: true, certificateVerification: true);
+```
+
+A certificate that does not match fails before any request byte is written. Following
+this client's convention, the failure is *returned* as a `TlsVerificationException`
+rather than thrown, the same way every other connection error is here — and it names
+the fingerprint that actually arrived, so a regenerated certificate is a one-line fix.
+
+> **Note.** `certificateVerification` is off by default. Turning it on by default
+> would break every deployment using the engine's self-signed certificate, so the
+> choice is yours to make explicitly.
 
 ## 👥 Owners & Access
 

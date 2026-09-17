@@ -34,6 +34,10 @@ abstract class KV {
   /// Whether to use TLS for the connection.
   bool useTls = false;
 
+  /// What to require of the engine's certificate, copied from the engine at
+  /// [connectEngine] time. Null encrypts without checking who answers.
+  TlsSettings? tls;
+
   /// Pooling config copied from the engine at [connectEngine] time, or null for
   /// connect-per-request.
   PoolConfig? pool;
@@ -70,6 +74,11 @@ abstract class KV {
       query,
       callback: callback,
       useTls: useTls,
+      // Read from the instance rather than taken as an argument: every caller
+      // of `runQuery` already passes this object's own host, port and useTls,
+      // and trust travels with them rather than being something a call site
+      // could forget.
+      tls: tls,
       poolConfig: pool,
     );
   }
@@ -102,9 +111,12 @@ abstract class KV {
     password = engine.password;
     store = engine.store;
     useTls = engine.useTls;
+    // The whole trust configuration travels, not just the on/off flag: a
+    // keyspace must require exactly what its engine was told to require.
+    tls = engine.tls;
     // Only the *config* is copied. The pool itself lives in a library-level
-    // registry keyed by (host, port, useTls), so every keyspace instance
-    // pointing at one server shares a single pool — important here because
+    // registry keyed by endpoint and TLS trust configuration, so keyspaces
+    // using the same settings share a single pool — important here because
     // keyspace state is per-instance, and a Flutter app building one per screen
     // or per rebuild would otherwise create a pool per instance.
     pool = engine.pool;
@@ -669,6 +681,8 @@ abstract class KV {
   /// ```
   ///
   /// Return relevance-ranked keys using semantic, BM25, or hybrid search.
+  /// [minScore] filters the final mode score before pagination: cosine for
+  /// semantic, BM25 for keyword, and fused RRF for hybrid search.
   Future<dynamic> searchKeys({
     required String query,
     SearchMode mode = SearchMode.semantic,
@@ -691,6 +705,8 @@ abstract class KV {
   }
 
   /// Return relevance-ranked values using semantic, BM25, or hybrid search.
+  /// [minScore] filters the final mode score before pagination: cosine for
+  /// semantic, BM25 for keyword, and fused RRF for hybrid search.
   Future<dynamic> searchValues({
     required String query,
     SearchMode mode = SearchMode.semantic,
