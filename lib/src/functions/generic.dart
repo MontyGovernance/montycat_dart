@@ -125,11 +125,27 @@ Uint8List convertToBinaryQuery({
   }
 
   if (bulkKeysValues.isNotEmpty) {
+    final updateSchemas = <String?>[];
     bulkKeysValues = {
       for (var entry in bulkKeysValues.entries)
         if (entry.value is Map<String, dynamic>)
-          entry.key: modifyPointers(entry.value),
+          entry.key:
+              (() {
+                final item = Map<String, dynamic>.from(entry.value);
+                updateSchemas.add(item.remove('schema') as String?);
+                return modifyPointers(item);
+              })(),
     };
+    final uniqueUpdateSchemas = updateSchemas.toSet();
+    if (uniqueUpdateSchemas.length > 1) {
+      throw Exception('Bulk values should fit only one schema');
+    }
+    if (updateSchemas.isNotEmpty && updateSchemas.first != null) {
+      if (schema != null && schema != updateSchemas.first) {
+        throw Exception('Bulk values should fit only one schema');
+      }
+      schema = updateSchemas.first;
+    }
   }
 
   if (bulkKeys.isNotEmpty) {
