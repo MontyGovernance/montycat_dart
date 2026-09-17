@@ -30,6 +30,14 @@
 - `Engine.fromUri` accepts `useTls` and the verification arguments, rather than
   always starting in plaintext.
 
+### Fixed
+
+- `updateBulk` now extracts the schema from serialized schema values and sends
+  it as request metadata, matching `insertBulk`. Nested `timestamps` metadata
+  is preserved, keeping updated rows registered in timestamp indexes.
+- Bulk update preparation copies caller-owned maps and rejects a batch that
+  mixes different schemas.
+
 ### Changed
 
 - Connection pools are keyed by the whole TLS configuration rather than by an

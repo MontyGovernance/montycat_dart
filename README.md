@@ -74,7 +74,7 @@ Add `montycat` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat: ^1.1.0
+  montycat: ^1.2.4
 ```
 
 Then fetch packages:
@@ -366,6 +366,11 @@ final hits = await production.searchValues(
 `vector` is also accepted by `insertCustomKeyValue` and `updateValue`, and
 `updateBulk` takes `vectors` for numeric keys plus `customVectors` for custom
 keys. All four `semanticSearch*` methods accept a query vector.
+
+Serialized `Schema` values can be passed directly to `updateBulk`. Their
+`schema` entry is transported as request metadata rather than stored as a
+document field, while nested `timestamps` metadata remains intact. Every value
+in one bulk update must use the same schema.
 
 **Embedding-space compatibility is required.** Every supplied record vector and
 query vector must be produced by the model enrolled for that keyspace, including
