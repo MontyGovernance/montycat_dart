@@ -319,8 +319,9 @@ class KeyspacePersistent extends KV {
     return await runQuery(host, port, query, useTls: useTls);
   }
 
-  /// Update cache and compression settings for this keyspace.
-  /// Throws an [ArgumentError] if [cache] or [compression] is empty.
+  /// Compatibility API for cache updates. Compression is immutable after
+  /// keyspace creation and must match its existing value. Prefer [updateCache].
+  /// Omitting [compression] performs a cache-only update.
   ///
   /// Example:
   ///
@@ -332,6 +333,29 @@ class KeyspacePersistent extends KV {
     int? cache,
     bool? compression,
   }) async {
+    final raw = <dynamic>[
+      "update-cache-compression",
+      "store",
+      store,
+      "keyspace",
+      keyspace,
+      "cache",
+      cache != null ? cache.toString() : "0",
+    ];
+    if (compression != null) {
+      raw.addAll(["compression", compression ? "y" : "n"]);
+    }
+    final queryMap = {
+      "raw": raw,
+      "credentials": [username, password],
+    };
+
+    final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
+    return await runQuery(host, port, query, useTls: useTls);
+  }
+
+  /// Updates cache capacity without resubmitting the immutable compression setting.
+  Future<dynamic> updateCache({int? cache}) async {
     final queryMap = {
       "raw": [
         "update-cache-compression",
@@ -341,12 +365,9 @@ class KeyspacePersistent extends KV {
         keyspace,
         "cache",
         cache != null ? cache.toString() : "0",
-        "compression",
-        compression == true ? "y" : "n",
       ],
       "credentials": [username, password],
     };
-
     final query = Uint8List.fromList(utf8.encode(jsonEncode(queryMap)));
     return await runQuery(host, port, query, useTls: useTls);
   }
