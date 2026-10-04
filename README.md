@@ -144,9 +144,16 @@ Future<void> main() async {
   production.connectEngine(engine);
 
   final customersCreated = await customers.createKeyspace();
-  final productionCreated = await production.createKeyspace();
+  final productionCreated = await production.createKeyspace(
+    cache: 128,
+    compression: true,
+  );
 
   print("Keyspaces created: $customersCreated, $productionCreated");
+
+  // Compression is fixed at persistent-keyspace creation. Cache capacity is
+  // in MB and can be changed later without resubmitting compression.
+  await production.updateCache(cache: 256);
 
   var customer = Customer({'name': 'Alice Smith', 'age': 28, 'email': null});
 
