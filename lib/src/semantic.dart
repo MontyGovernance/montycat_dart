@@ -60,6 +60,10 @@ class SemanticStatus {
   final SemanticIndexingStatus indexing;
   final String defaultModel;
   final String? defaultField;
+
+  /// Null when talking to a server predating allocator configuration.
+  final bool? cpuArena;
+  final bool? cpuArenaOverride;
   final Map<String, SemanticKeyspaceStatus> keyspaces;
 
   const SemanticStatus({
@@ -68,6 +72,8 @@ class SemanticStatus {
     required this.indexing,
     required this.defaultModel,
     required this.defaultField,
+    this.cpuArena,
+    this.cpuArenaOverride,
     required this.keyspaces,
   });
 
@@ -89,6 +95,11 @@ class SemanticStatus {
       ),
       defaultModel: json['default_model']?.toString() ?? '',
       defaultField: json['default_field']?.toString(),
+      cpuArena: json['cpu_arena'] is bool ? json['cpu_arena'] as bool : null,
+      cpuArenaOverride:
+          json['cpu_arena_override'] is bool
+              ? json['cpu_arena_override'] as bool
+              : null,
       keyspaces: keyspaces,
     );
   }

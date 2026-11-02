@@ -1,3 +1,13 @@
+## 1.2.6 - 2026-11-01
+
+### Added
+
+- Add optional `cpuArena` to `Engine.enableSemanticSearch()` and expose
+  `cpuArena` and `cpuArenaOverride` in semantic status. The DB-wide setting
+  persists; the default is unchanged. Disabling the arena can lower idle
+  memory at an inference throughput cost. Requires Montycat Semantic server
+  1.3.9 or newer.
+
 ## 1.2.5 - 2026-10-04
 
 ### Added

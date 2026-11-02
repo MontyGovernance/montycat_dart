@@ -74,7 +74,7 @@ Add `montycat` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  montycat: ^1.2.4
+  montycat: ^1.2.6
 ```
 
 Then fetch packages:
@@ -274,6 +274,15 @@ final productsStatus = semantic.keyspace('catalog', 'products');
 // After globally re-enabling semantic search, wait until
 // semantic.reloading is false before searching retained indexes.
 // semantic.indexing reports live and backfill queue depths.
+// semantic.cpuArena is the effective value on server 1.3.9+;
+// semantic.cpuArenaOverride is the saved API override, if any.
+
+// Optional DB-wide allocator override. The default is true; false may lower
+// idle memory at an inference throughput cost. No vector backfill is needed.
+await engine.enableSemanticSearch(cpuArena: false);
+
+// MONTYCAT_EMBED_CPU_ARENA sets the server startup default when no saved
+// DB-wide API override exists.
 
 // Enable an unenrolled keyspace with an explicit model.
 await engine.enableSemanticSearch(

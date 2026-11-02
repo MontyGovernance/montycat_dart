@@ -301,20 +301,30 @@ class Engine {
   /// An already-enrolled keyspace is not modified. An explicitly different
   /// model or field is rejected; use [reembedSemanticSearch] to replace it.
   ///
+  /// [cpuArena] persists a DB-wide allocator override; omit store/keyspace.
+  /// False trades inference throughput for lower idle memory; true retains
+  /// buffer reuse. Both indexing and queries use it. Stored vectors are kept.
   Future<dynamic> enableSemanticSearch({
     SemanticModel? model,
     String? field,
     String? store,
     String? keyspace,
+    bool? cpuArena,
   }) async {
     if (keyspace != null && store == null) {
       throw ArgumentError("A store is required when keyspace is specified");
     }
     final List<dynamic> command = ["enable-semantic-search"];
+    if (cpuArena != null && (store != null || keyspace != null)) {
+      throw ArgumentError(
+        'cpuArena is a DB-wide setting; omit store and keyspace',
+      );
+    }
     if (model != null) command.addAll(["model", model.wireName]);
     if (field != null) command.addAll(["field", field]);
     if (store != null) command.addAll(["store", store]);
     if (keyspace != null) command.addAll(["keyspace", keyspace]);
+    if (cpuArena != null) command.addAll(["cpu-arena", cpuArena.toString()]);
     return await _executeQuery(command);
   }
 
