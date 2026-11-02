@@ -59,6 +59,21 @@ void main() {
     );
   });
 
+  test('CPU arena settings preserve false and require DB-wide scope', () async {
+    final commands = await captureCommands((engine) async {
+      await engine.enableSemanticSearch(cpuArena: false);
+      await engine.enableSemanticSearch(cpuArena: true);
+      await expectLater(
+        engine.enableSemanticSearch(store: 'catalog', cpuArena: false),
+        throwsArgumentError,
+      );
+    });
+    expect(commands.map((query) => query['raw']).toList(), [
+      ['enable-semantic-search', 'cpu-arena', 'false'],
+      ['enable-semantic-search', 'cpu-arena', 'true'],
+    ]);
+  });
+
   test('builds store, owner, access, and semantic commands', () async {
     final commands = await captureCommands((engine) async {
       await engine.createStore();
